@@ -1,0 +1,12 @@
+--- /dev/null	2008-09-20 20:18:36.504079830 +0200
++++ files/Makefile	2008-09-29 15:18:47.000000000 +0200
+@@ -0,0 +1,9 @@
++obj-m += hello-2.o
++
++PWD  := $(shell pwd)
++
++default:
++	$(MAKE) -C $(KERNELDIR) SUBDIRS=$(PWD) CC=$(CC) modules
++
++clean:
++	$(MAKE) -C $(KERNELDIR) SUBDIRS=$(PWD) CC=$(CC) clean
