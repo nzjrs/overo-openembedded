@@ -1,0 +1,20 @@
+Index: src/main.c
+===================================================================
+--- osm-gps-map-0.1/src/main.c	(revision 691)
++++ osm-gps-map-0.1/src/main.c	(working copy)
+@@ -204,7 +204,14 @@
+ 						"proxy-uri",PROXY_URI,
+ 						NULL);
+ #elif MAP_PROVIDER == 3
+-	map = osm_gps_map_new ();
++	const char *homedir = g_getenv("HOME");
++	if (!homedir)
++		homedir = g_get_home_dir();
++	char *cachedir = g_strdup_printf("%s/Maps/OSM", homedir);
++	map = g_object_new (OSM_TYPE_GPS_MAP,
++						"tile-cache",cachedir,
++						NULL);
++	g_free(cachedir);
+ #elif MAP_PROVIDER == 4
+ 	map = g_object_new (OSM_TYPE_GPS_MAP,
+ 						"repo-uri","http://maps-for-free.com/layer/relief/z#Z/row#Y/#Z_#X-#Y.jpg",
