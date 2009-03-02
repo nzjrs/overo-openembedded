@@ -4,7 +4,7 @@ LICENSE = "GPLv2"
 SECTION = "x/games"
 PRIORITY = "optional"
 
-DEPENDS="libv4l"
+DEPENDS="libv4l gtk+"
 
 PR = "r1"
 
