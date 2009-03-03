@@ -6,9 +6,9 @@ LICENSE = "GPLv2"
 
 ARM_INSTRUCTION_SET = "arm"
 
-PR = "r1"
+PR = "r2"
 
-DEPENDS = "libtool jpeg zlib libpng tiff glib-2.0 gtk+ libv4l"
+DEPENDS = "libtool jpeg zlib libpng tiff glib-2.0 gtk+ libv4l ffmpeg"
 
 SRCREV = "fb7cc87ed6a7425f3edc58e2d1eb44599496ac09"
 SRC_URI = "git://github.com/nzjrs/opencv.git;protocol=git;branch=libv4l"
