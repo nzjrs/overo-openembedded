@@ -1,6 +1,6 @@
 DESCRIPTION = "johns hello world sample program"
 
-PR = "r0"
+PR = "r1"
 
 DEPENDS = ""
 
@@ -15,9 +15,8 @@ do_compile () {
 }
 
 do_install () {
-    install -d ${D}${bindir}/
-    install -m 0755 ${S}/hello ${D}${bindir}/
+    install -d ${D}${bindir}
+    install -m 0755 hello ${D}${bindir}
 }
 
-FILES_${PN} = "${bindir}/hello"
 
