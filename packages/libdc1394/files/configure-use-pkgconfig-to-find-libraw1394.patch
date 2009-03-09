@@ -1,0 +1,46 @@
+--- libdc1394-2.1.0.orig/configure.in	2009-01-30 12:34:46.000000000 +1300
++++ libdc1394-2.1.0/configure.in	2009-03-09 17:49:55.000000000 +1300
+@@ -47,9 +47,9 @@
+     AC_DEFINE(HAVE_LINUX,[],[Defined if compiled for Linux])
+     # Check for the new version of libraw1394 first since they might have both
+     # installed and we want to use the newest version
+-    AC_CHECK_LIB(raw1394, raw1394_channel_modify,
+-       [AC_DEFINE(HAVE_LIBRAW1394,[],[Defined if libraw1394 is present]) libraw1394=true],
+-       [AC_MSG_WARN(libraw1394 not found or too old. Please upgrade to 1.2.0 or a more recent version.)])
++    PKG_CHECK_MODULES(LIBRAW1394, [libraw1394 >= 1.2.0],
++       [AC_DEFINE(HAVE_LIBRAW1394,[],[Defined if libraw1394 is present])],
++       [AC_MSG_WARN([libraw1394 not found or too old. Please upgrade to 1.2.0 or a more recent version.])])
+     ;;
+ *-*-darwin*)
+     AC_CHECK_LIB(IOKit, IOMasterPort,
+@@ -70,7 +70,7 @@
+ AM_CONDITIONAL(HAVE_LINUX, test x$have_linux = xtrue)
+ AM_CONDITIONAL(HAVE_MACOSX, test x$have_macosx = xtrue)
+ AM_CONDITIONAL(HAVE_WINDOWS, test x$have_windows = xtrue)
+-AM_CONDITIONAL(HAVE_LIBRAW1394, test x$libraw1394 = xtrue)
++AM_CONDITIONAL(HAVE_LIBRAW1394, test "x$LIBRAW1394_LIBS" != "x")
+ AM_CONDITIONAL(HAVE_LIBUSB, test "x$LIBUSB_LIBS" != "x")
+ 
+ # check for Xv extensions (necessary for examples/dc1394_multiview)
+@@ -140,7 +140,7 @@
+ AC_OUTPUT
+ 
+ if test x$have_linux = xtrue; then
+-  if test x$libraw1394 = xtrue; then
++if test "x$LIBRAW1394_LIBS" != "x"; then
+     RAW1394MSG="Enabled"
+   else
+     RAW1394MSG="Disabled (libraw1394 not found)"
+--- libdc1394-2.1.0.orig/dc1394/linux/Makefile.am	2008-12-31 06:32:04.000000000 +1300
++++ libdc1394-2.1.0/dc1394/linux/Makefile.am	2009-03-09 17:45:36.000000000 +1300
+@@ -10,8 +10,8 @@
+ endif
+ 
+ 
+-AM_CFLAGS =-I$(top_srcdir) -I$(top_srcdir)/dc1394
+-libdc1394_linux_la_LIBADD = -lraw1394
++AM_CFLAGS =-I$(top_srcdir) -I$(top_srcdir)/dc1394 $(LIBRAW1394_CFLAGS)
++libdc1394_linux_la_LIBADD = $(LIBRAW1394_LIBS)
+ libdc1394_linux_la_SOURCES =  \
+ 	control.c \
+ 	capture.c \
