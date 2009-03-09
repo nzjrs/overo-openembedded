@@ -1,4 +1,4 @@
-DESCRIPTION = "libdc1394"
+DESCRIPTION = "1394-based DC Control Library"
 HOMEPAGE = "http://sourceforge.net/projects/libdc1394"
 SECTION = "libs"
 LICENSE = "LGPLv2"
