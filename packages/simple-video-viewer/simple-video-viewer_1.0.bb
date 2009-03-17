@@ -6,9 +6,9 @@ PRIORITY = "optional"
 
 DEPENDS="libv4l gtk+"
 
-PR = "r1"
+PR = "r2"
 
-SRCREV = "dedf6cb62d0bfe234dae84e8e5dacdc934e59bad"
+SRCREV = "ef1670ba799c407ce52f2e1d53ae655124072af6"
 SRC_URI = "git://github.com/nzjrs/simple-video-viewer.git;protocol=git;branch=master"
 
 S = "${WORKDIR}/git"
