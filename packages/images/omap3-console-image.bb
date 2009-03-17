@@ -16,6 +16,7 @@ IMAGE_INSTALL += " \
   alsa-utils-aplay \
   bash \
   bzip2 \
+  devmem2 \
   dosfstools \
   e2fsprogs-mke2fs \
   fbgrab \
@@ -32,7 +33,10 @@ IMAGE_INSTALL += " \
   libertas-sd-firmware \
   rt73-firmware \
   zd1211-firmware \
-#  omap3-sgx-modules \
+ "
+
+IMAGE_INSTALL_append_beagleboard = " \
+  libgles-omap3 \
  "
 
 IMAGE_PREPROCESS_COMMAND = "create_etc_timestamp"

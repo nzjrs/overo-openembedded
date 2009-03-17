@@ -68,4 +68,10 @@ IMAGE_INSTALL += " \
   psplash \
   ${XSERVER} \
   xdg-utils \
+  xrefresh \
  "
+
+IMAGE_INSTALL_append_beagleboard = " \
+  libgles-omap3-demos \
+ "
+
