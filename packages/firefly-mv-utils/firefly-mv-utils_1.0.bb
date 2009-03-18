@@ -3,11 +3,11 @@ HOMEPAGE = "http://github.com/nzjrs/firefly-mv/tree/master"
 SECTION = "console/utils"
 PRIORITY = "optional"
 LICENSE = "GPL"
-PR = "r1"
+PR = "r2"
 
 DEPENDS = "libdc1394"
 
-SRCREV = "a72f8669a43533c66aa7efc3a44cdfc5a4b75118"
+SRCREV = "1abb76a05095c846111e08adbbe003857b5e86d7"
 SRC_URI = "git://github.com/nzjrs/firefly-mv.git;protocol=git;branch=master"
 
 inherit pkgconfig
@@ -15,10 +15,11 @@ inherit pkgconfig
 S = "${WORKDIR}/git"
 
 do_compile() {
-	oe_runmake camls
+	oe_runmake camls record-gray
 }
 
 do_install () {
 	install -d ${D}${bindir}
 	install -m 0755 camls ${D}${bindir}/
+	install -m 0755 record-gray ${D}${bindir}/
 }
