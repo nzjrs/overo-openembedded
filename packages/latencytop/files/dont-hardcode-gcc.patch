@@ -1,0 +1,25 @@
+diff -u latencytop-0.4.orig/Makefile latencytop-0.4/Makefile
+--- latencytop-0.4.orig/Makefile	2009-03-19 16:29:16.000000000 +1300
++++ latencytop-0.4/Makefile	2009-03-19 16:57:16.000000000 +1300
+@@ -14,10 +14,10 @@
+ 
+ # We write explicity this "implicit rule"
+ %.o : %.c
+-	gcc -c $(CFLAGS) $(XCFLAGS) $< -o $@
++	$(CC) -c $(CFLAGS) $(XCFLAGS) $< -o $@
+ 
+ latencytop: latencytop.o display.o latencytop.h translate.o Makefile
+-	gcc $(CFLAGS) latencytop.o display.o translate.o $(LDF) -o latencytop 
++	$(CC) $(CFLAGS) latencytop.o display.o translate.o $(LDF) -o latencytop 
+ 
+ 
+ clean:
+@@ -25,5 +25,6 @@
+ 
+ install: latencytop
+ 	mkdir -p $(DESTDIR)/usr/share/latencytop
++	mkdir -p $(DESTDIR)$(SBINDIR)/
+ 	install -m 0644 latencytop.trans $(DESTDIR)/usr/share/latencytop/latencytop.trans
+-	install -m 0755 latencytop $(DESTDIR)$(SBINDIR)/
+\ No newline at end of file
++	install -m 0755 latencytop $(DESTDIR)$(SBINDIR)/
