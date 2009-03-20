@@ -1,49 +1,69 @@
 #include <cv.h>
 #include <highgui.h>
 
-#include <ctype.h>
+#include <stdlib.h>
 #include <stdio.h>
 
-CvCapture *utils_get_capture(int argc, char** argv)
+static void usage(char *me)
 {
-    CvCapture* capture = NULL;
-    const char* input_name;
-
-    input_name = argc > 1 ? argv[1] : 0;
-    
-    if( !input_name || (isdigit(input_name[0]) && input_name[1] == '\0') )
-        capture = cvCaptureFromCAM( !input_name ? 0 : input_name[0] - '0' );
-    else
-        capture = cvCaptureFromAVI( input_name ); 
-
-    return capture;
+    printf(
+        "Usage:\n%s\t<base+index>\n"
+        "Base:\n"
+        "0\tAutodetect\n"
+        "100\tMIL proprietary drivers\n"
+        "200\tPlatform native (VFW, VFL2, etc)\n"
+        "300\tIEEE 1394 drivers\n"
+        "400\tTYZX proprietary drivers\n"
+        "500\tQuickTime\n"
+        "600\tUnicap drivers\n"
+        "700\tDirectShow (via videoInput)\n", me);
 }
 
-int main( int argc, char** argv )
+int main( int argc, char* argv[] )
 {
     CvCapture* capture = NULL;
     IplImage *frame = NULL;
+    int index = -1;
 
-    capture = utils_get_capture(argc, argv);
+    if (argc != 2) {
+        usage(argv[0]);
+        exit(1);
+    }
+
+    index = strtol(argv[1], NULL, 0);
+    if (index < 0 || index > 800) {
+        usage(argv[0]);
+        exit(2);
+    }        
+
+    capture = cvCreateCameraCapture(index);
 
     if( capture )
     {
-        cvNamedWindow( "video", CV_WINDOW_AUTOSIZE );
+        cvNamedWindow( "result", CV_WINDOW_AUTOSIZE );
 
         for(;;)
         {
             frame = cvQueryFrame( capture );
-            if( !frame )
+            if( !frame ) 
+            {
+                printf("ERROR: cvQueryFrame\n");
                 break;
+            }
 
-            cvShowImage( "video", frame );
+            cvShowImage( "result", frame );
 
             if( cvWaitKey( 10 ) >= 0 )
                 break;
         }
         cvReleaseCapture( &capture );
-        cvDestroyWindow("video");
+        cvDestroyWindow("result");
+    }
+    else
+    {
+        printf("ERROR: cvCreateCameraCapture(%d)\n", index);
     }
     
     return 0;
 }
+

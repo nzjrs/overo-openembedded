@@ -1,6 +1,6 @@
 DESCRIPTION = "OpenCV Test Application"
 
-PR = "r2"
+PR = "r5"
 DEPENDS = "opencv"
 
 SRC_URI = " \
