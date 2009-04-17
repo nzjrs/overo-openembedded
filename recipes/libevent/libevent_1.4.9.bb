@@ -6,9 +6,11 @@ SECTION = "libs"
 AUTHOR = "Niels Provos <provos@citi.umich.edu>"
 LICENSE = "BSD"
 
-SRC_URI = "http://monkey.org/~provos/libevent-${PV}.tar.gz"
+SRC_URI = "http://monkey.org/~provos/libevent-${PV}-stable.tar.gz"
 
 inherit autotools
+
+S = "${WORKDIR}/libevent-1.4.9-stable"
 
 do_stage() {
 	autotools_stage_all
