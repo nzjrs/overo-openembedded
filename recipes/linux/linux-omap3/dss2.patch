@@ -1,9 +1,9 @@
 diff --git a/Documentation/arm/OMAP/DSS b/Documentation/arm/OMAP/DSS
 new file mode 100644
-index 0000000..9e902a2
+index 0000000..751000b
 --- /dev/null
 +++ b/Documentation/arm/OMAP/DSS
-@@ -0,0 +1,311 @@
+@@ -0,0 +1,317 @@
 +OMAP2/3 Display Subsystem
 +-------------------------
 +
@@ -139,10 +139,16 @@ index 0000000..9e902a2
 +output_size	width,height
 +position	x,y
 +screen_width	width
++global_alpha   	global alpha 0-255 0=transparent 255=opaque
 +
 +/sys/devices/platform/omapdss/manager? directory:
-+display		Destination display
++display				Destination display
 +name
++alpha_blending_enabled		0=off 1=on
++color_key_enabled		0=off 1=on
++color_key_type			gfx-destination video-source
++color_key_value			0 to 2^24
++default_color			default background color RGB24 0 to 2^24
 +
 +/sys/devices/platform/omapdss/display? directory:
 +ctrl_name	Controller name
@@ -5804,7 +5810,7 @@ index f1552f0..d09f956 100644
  }
  
 diff --git a/arch/arm/mach-omap2/board-omap3beagle.c b/arch/arm/mach-omap2/board-omap3beagle.c
-index 19bc2a1..55db61e 100644
+index 19bc2a1..a27d1ef 100644
 --- a/arch/arm/mach-omap2/board-omap3beagle.c
 +++ b/arch/arm/mach-omap2/board-omap3beagle.c
 @@ -30,6 +30,7 @@
@@ -5845,7 +5851,7 @@ index 19bc2a1..55db61e 100644
  static struct gpio_led gpio_leds[] = {
  	{
  		.name			= "beagleboard::usr0",
-@@ -373,13 +371,94 @@ static struct platform_device keys_gpio = {
+@@ -373,13 +371,98 @@ static struct platform_device keys_gpio = {
  	},
  };
  
@@ -5854,7 +5860,7 @@ index 19bc2a1..55db61e 100644
 +static int beagle_enable_dvi(struct omap_display *display)
 +{
 +	if (display->hw_config.panel_reset_gpio != -1)
-+		gpio_direction_output(display->hw_config.panel_reset_gpio, 1);
++		gpio_set_value(display->hw_config.panel_reset_gpio, 1);
 +
 +	return 0;
 +}
@@ -5862,7 +5868,7 @@ index 19bc2a1..55db61e 100644
 +static void beagle_disable_dvi(struct omap_display *display)
 +{
 +	if (display->hw_config.panel_reset_gpio != -1)
-+		gpio_direction_output(display->hw_config.panel_reset_gpio, 0);
++		gpio_set_value(display->hw_config.panel_reset_gpio, 0);
 +}
 +
 +static struct omap_dss_display_config beagle_display_data_dvi = {
@@ -5927,8 +5933,12 @@ index 19bc2a1..55db61e 100644
 +	int r;
 +
 +	r = gpio_request(beagle_display_data_dvi.panel_reset_gpio, "DVI reset");
-+	if (r < 0)
++	if (r < 0) {
 +		printk(KERN_ERR "Unable to get DVI reset GPIO\n");
++		return;
++	}
++
++	gpio_direction_output(beagle_display_data_dvi.panel_reset_gpio, 0);
 +}
 +
  static struct omap_board_config_kernel omap3_beagle_config[] __initdata = {
@@ -5942,7 +5952,7 @@ index 19bc2a1..55db61e 100644
  	&leds_gpio,
  	&keys_gpio,
  };
-@@ -432,13 +511,11 @@ static void __init omap3_beagle_init(void)
+@@ -432,13 +515,11 @@ static void __init omap3_beagle_init(void)
  	omap_serial_init();
  
  	omap_cfg_reg(J25_34XX_GPIO170);
@@ -6212,7 +6222,7 @@ index 6eb3c52..dd80ce8 100644
  
  static void __init omap3_evm_map_io(void)
 diff --git a/arch/arm/mach-omap2/board-overo.c b/arch/arm/mach-omap2/board-overo.c
-index f357de9..ce3ce84 100644
+index 3a9c519..48f9932 100644
 --- a/arch/arm/mach-omap2/board-overo.c
 +++ b/arch/arm/mach-omap2/board-overo.c
 @@ -40,6 +40,7 @@
@@ -6223,15 +6233,7 @@ index f357de9..ce3ce84 100644
  #include <mach/gpio.h>
  #include <mach/gpmc.h>
  #include <mach/hardware.h>
-@@ -52,6 +53,7 @@
- 
- #define OVERO_GPIO_BT_XGATE	15
- #define OVERO_GPIO_W2W_NRESET	16
-+#define OVERO_GPIO_PENDOWN	114
- #define OVERO_GPIO_BT_NRESET	164
- #define OVERO_GPIO_USBH_CPEN	168
- #define OVERO_GPIO_USBH_NRESET	183
-@@ -185,6 +187,9 @@ static inline void __init overo_init_smsc911x(void) { return; }
+@@ -186,6 +187,9 @@ static inline void __init overo_init_smsc911x(void) { return; }
  
  
  
@@ -6241,7 +6243,7 @@ index f357de9..ce3ce84 100644
  static struct mtd_partition overo_nand_partitions[] = {
  	{
  		.name           = "xloader",
-@@ -369,22 +374,101 @@ static void __init overo_init_irq(void)
+@@ -370,22 +374,101 @@ static void __init overo_init_irq(void)
  	omap_gpio_init();
  }
  
@@ -6292,8 +6294,10 @@ index f357de9..ce3ce84 100644
 +	.u.dpi.data_lines = 24,
 +	.panel_enable = overo_panel_enable_dvi,
 +	.panel_disable = overo_panel_disable_dvi,
-+};
-+
+ };
+ 
+-static struct omap_lcd_config overo_lcd_config __initdata = {
+-	.ctrl_name	= "internal",
 +static int overo_panel_enable_lcd(struct omap_display *display)
 +{
 +	if (dvi_enabled) {
@@ -6327,10 +6331,8 @@ index f357de9..ce3ce84 100644
 +		&overo_display_data_dvi,
 +		&overo_display_data_lcd,
 +	}
- };
- 
--static struct omap_lcd_config overo_lcd_config __initdata = {
--	.ctrl_name	= "internal",
++};
++
 +static struct platform_device overo_dss_device = {
 +	.name          = "omapdss",
 +	.id            = -1,
@@ -6350,11 +6352,10 @@ index f357de9..ce3ce84 100644
  };
  
  static void __init overo_init(void)
-@@ -399,7 +483,7 @@ static void __init overo_init(void)
+@@ -400,6 +483,7 @@ static void __init overo_init(void)
  	overo_flash_init();
- 	overo_init_smsc911x();
  	overo_ads7846_init();
--	overo_init_smsc911x();
+ 	overo_init_smsc911x();
 +	overo_display_init();
  
  	if ((gpio_request(OVERO_GPIO_W2W_NRESET,
@@ -6392,6 +6393,103 @@ index 3ebc09e..e6146b2 100644
  obj-m :=
  obj-n :=
  obj-  :=
+diff --git a/arch/arm/plat-omap/dma.c b/arch/arm/plat-omap/dma.c
+old mode 100644
+new mode 100755
+index 6093018..69e89b4
+--- a/arch/arm/plat-omap/dma.c
++++ b/arch/arm/plat-omap/dma.c
+@@ -310,41 +310,62 @@ EXPORT_SYMBOL(omap_set_dma_transfer_params);
+ 
+ void omap_set_dma_color_mode(int lch, enum omap_dma_color_mode mode, u32 color)
+ {
+-	u16 w;
+-
+ 	BUG_ON(omap_dma_in_1510_mode());
+ 
+-	if (cpu_class_is_omap2()) {
+-		REVISIT_24XX();
+-		return;
+-	}
++	if (cpu_class_is_omap1()) {
++		u16 w;
+ 
+-	w = dma_read(CCR2(lch));
+-	w &= ~0x03;
++		w = dma_read(CCR2(lch));
++		w &= ~0x03;
+ 
+-	switch (mode) {
+-	case OMAP_DMA_CONSTANT_FILL:
+-		w |= 0x01;
+-		break;
+-	case OMAP_DMA_TRANSPARENT_COPY:
+-		w |= 0x02;
+-		break;
+-	case OMAP_DMA_COLOR_DIS:
+-		break;
+-	default:
+-		BUG();
++		switch (mode) {
++		case OMAP_DMA_CONSTANT_FILL:
++			w |= 0x01;
++			break;
++		case OMAP_DMA_TRANSPARENT_COPY:
++			w |= 0x02;
++			break;
++		case OMAP_DMA_COLOR_DIS:
++			break;
++		default:
++			BUG();
++		}
++		dma_write(w, CCR2(lch));
++
++		w = dma_read(LCH_CTRL(lch));
++		w &= ~0x0f;
++		/* Default is channel type 2D */
++		if (mode) {
++			dma_write((u16)color, COLOR_L(lch));
++			dma_write((u16)(color >> 16), COLOR_U(lch));
++			w |= 1;		/* Channel type G */
++		}
++		dma_write(w, LCH_CTRL(lch));
+ 	}
+-	dma_write(w, CCR2(lch));
+ 
+-	w = dma_read(LCH_CTRL(lch));
+-	w &= ~0x0f;
+-	/* Default is channel type 2D */
+-	if (mode) {
+-		dma_write((u16)color, COLOR_L(lch));
+-		dma_write((u16)(color >> 16), COLOR_U(lch));
+-		w |= 1;		/* Channel type G */
++	if (cpu_class_is_omap2()) {
++		u32 val;
++
++		val = dma_read(CCR(lch));
++		val &= ~((1 << 17) | (1 << 16));
++
++		switch (mode) {
++		case OMAP_DMA_CONSTANT_FILL:
++			val |= 1 << 16;
++			break;
++		case OMAP_DMA_TRANSPARENT_COPY:
++			val |= 1 << 17;
++			break;
++		case OMAP_DMA_COLOR_DIS:
++			break;
++		default:
++			BUG();
++		}
++		dma_write(val, CCR(lch));
++
++		color &= 0xffffff;
++		dma_write(color, COLOR(lch));
+ 	}
+-	dma_write(w, LCH_CTRL(lch));
+ }
+ EXPORT_SYMBOL(omap_set_dma_color_mode);
+ 
 diff --git a/arch/arm/plat-omap/fb.c b/arch/arm/plat-omap/fb.c
 index 3746222..1dc3415 100644
 --- a/arch/arm/plat-omap/fb.c
@@ -6448,10 +6546,10 @@ index 3746222..1dc3415 100644
  void omapfb_reserve_sdram(void) {}
 diff --git a/arch/arm/plat-omap/include/mach/display.h b/arch/arm/plat-omap/include/mach/display.h
 new file mode 100644
-index 0000000..6b702c7
+index 0000000..45b16ca
 --- /dev/null
 +++ b/arch/arm/plat-omap/include/mach/display.h
-@@ -0,0 +1,523 @@
+@@ -0,0 +1,538 @@
 +/*
 + * linux/include/asm-arm/arch-omap/display.h
 + *
@@ -6795,6 +6893,11 @@ index 0000000..6b702c7
 +
 +struct omap_overlay_manager;
 +
++enum omap_dss_rotation_type {
++	OMAP_DSS_ROT_DMA = 0,
++	OMAP_DSS_ROT_VRFB = 1,
++};
++
 +struct omap_overlay_info {
 +	bool enabled;
 +
@@ -6805,12 +6908,14 @@ index 0000000..6b702c7
 +	u16 height;
 +	enum omap_color_mode color_mode;
 +	u8 rotation;
++	enum omap_dss_rotation_type rotation_type;
 +	bool mirror;
 +
 +	u16 pos_x;
 +	u16 pos_y;
 +	u16 out_width;	/* if 0, out_width == width */
 +	u16 out_height;	/* if 0, out_height == height */
++	u8 global_alpha;
 +};
 +
 +enum omap_overlay_caps {
@@ -6862,11 +6967,19 @@ index 0000000..6b702c7
 +	int (*apply)(struct omap_overlay_manager *mgr);
 +
 +	void (*set_default_color)(struct omap_overlay_manager *mgr, u32 color);
-+	void (*set_trans_key)(struct omap_overlay_manager *mgr,
++	u32 (*get_default_color)(struct omap_overlay_manager *mgr);
++	bool (*get_alpha_blending_status)(struct omap_overlay_manager *mgr);
++	bool (*get_trans_key_status)(struct omap_overlay_manager *mgr);
++	void (*get_trans_key_type_and_value)(struct omap_overlay_manager *mgr,
++		enum omap_dss_color_key_type *type,
++		u32 *trans_key);
++	void (*set_trans_key_type_and_value)(struct omap_overlay_manager *mgr,
 +		enum omap_dss_color_key_type type,
 +		u32 trans_key);
 +	void (*enable_trans_key)(struct omap_overlay_manager *mgr,
 +		bool enable);
++	void (*enable_alpha_blending)(struct omap_overlay_manager *mgr,
++			bool enable);
 +};
 +
 +enum omap_display_caps {
@@ -6975,6 +7088,18 @@ index 0000000..6b702c7
 +		unsigned long timeout);
 +
 +#endif
+diff --git a/arch/arm/plat-omap/include/mach/dma.h b/arch/arm/plat-omap/include/mach/dma.h
+index 224b077..4e34f47 100644
+--- a/arch/arm/plat-omap/include/mach/dma.h
++++ b/arch/arm/plat-omap/include/mach/dma.h
+@@ -144,6 +144,7 @@
+ #define OMAP_DMA4_CSSA_U(n)		0
+ #define OMAP_DMA4_CDSA_L(n)		0
+ #define OMAP_DMA4_CDSA_U(n)		0
++#define OMAP1_DMA_COLOR(n)		0
+ 
+ /*----------------------------------------------------------------------------*/
+ 
 diff --git a/arch/arm/plat-omap/include/mach/omapfb.h b/arch/arm/plat-omap/include/mach/omapfb.h
 deleted file mode 100644
 index 7b74d12..0000000
@@ -7381,10 +7506,10 @@ index 7b74d12..0000000
 -#endif /* __OMAPFB_H */
 diff --git a/arch/arm/plat-omap/include/mach/vram.h b/arch/arm/plat-omap/include/mach/vram.h
 new file mode 100644
-index 0000000..f176562
+index 0000000..8639e08
 --- /dev/null
 +++ b/arch/arm/plat-omap/include/mach/vram.h
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,34 @@
 +/*
 + * File: arch/arm/plat-omap/include/mach/vram.h
 + *
@@ -7411,6 +7536,7 @@ index 0000000..f176562
 +
 +#include <asm/types.h>
 +
++extern int omap_vram_add_region(unsigned long paddr, size_t size);
 +extern int omap_vram_free(unsigned long paddr, size_t size);
 +extern int omap_vram_alloc(int mtype, size_t size, unsigned long *paddr);
 +extern int omap_vram_reserve(unsigned long paddr, size_t size);
@@ -7420,10 +7546,10 @@ index 0000000..f176562
 +#endif
 diff --git a/arch/arm/plat-omap/include/mach/vrfb.h b/arch/arm/plat-omap/include/mach/vrfb.h
 new file mode 100644
-index 0000000..2047862
+index 0000000..12c7fab
 --- /dev/null
 +++ b/arch/arm/plat-omap/include/mach/vrfb.h
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,48 @@
 +/*
 + * File: arch/arm/plat-omap/include/mach/vrfb.h
 + *
@@ -7450,6 +7576,7 @@ index 0000000..2047862
 +#ifndef __VRFB_H
 +#define __VRFB_H
 +
++#include <mach/display.h>
 +#define OMAP_VRFB_LINE_LEN 2048
 +
 +struct vrfb
@@ -7468,15 +7595,15 @@ index 0000000..2047862
 +		u8 bytespp);
 +extern void omap_vrfb_setup(struct vrfb *vrfb, unsigned long paddr,
 +		u16 width, u16 height,
-+		u8 bytespp);
++		enum omap_color_mode color_mode);
 +
 +#endif /* __VRFB_H */
 diff --git a/arch/arm/plat-omap/vram.c b/arch/arm/plat-omap/vram.c
 new file mode 100644
-index 0000000..f24a110
+index 0000000..b126a64
 --- /dev/null
 +++ b/arch/arm/plat-omap/vram.c
-@@ -0,0 +1,615 @@
+@@ -0,0 +1,632 @@
 +/*
 + * linux/arch/arm/plat-omap/vram.c
 + *
@@ -7506,15 +7633,17 @@ index 0000000..f24a110
 +#include <linux/mm.h>
 +#include <linux/list.h>
 +#include <linux/dma-mapping.h>
-+#include <linux/proc_fs.h>
 +#include <linux/seq_file.h>
 +#include <linux/bootmem.h>
 +#include <linux/omapfb.h>
++#include <linux/completion.h>
++#include <linux/debugfs.h>
 +
 +#include <asm/setup.h>
 +
 +#include <mach/sram.h>
 +#include <mach/vram.h>
++#include <mach/dma.h>
 +
 +#ifdef DEBUG
 +#define DBG(format, ...) printk(KERN_DEBUG "VRAM: " format, ## __VA_ARGS__)
@@ -7539,11 +7668,12 @@ index 0000000..f24a110
 + * time when we cannot yet allocate the region list */
 +#define MAX_POSTPONED_REGIONS 10
 +
-+static int postponed_cnt __initdata;
++static bool vram_initialized;
++static int postponed_cnt;
 +static struct {
 +	unsigned long paddr;
 +	size_t size;
-+} postponed_regions[MAX_POSTPONED_REGIONS] __initdata;
++} postponed_regions[MAX_POSTPONED_REGIONS];
 +
 +struct vram_alloc {
 +	struct list_head list;
@@ -7624,39 +7754,32 @@ index 0000000..f24a110
 +	kfree(va);
 +}
 +
-+static __init int omap_vram_add_region_postponed(unsigned long paddr,
-+		size_t size)
-+{
-+	if (postponed_cnt == MAX_POSTPONED_REGIONS)
-+		return -ENOMEM;
-+
-+	postponed_regions[postponed_cnt].paddr = paddr;
-+	postponed_regions[postponed_cnt].size = size;
-+
-+	++postponed_cnt;
-+
-+	return 0;
-+}
-+
-+/* add/remove_region can be exported if there's need to add/remove regions
-+ * runtime */
-+static int omap_vram_add_region(unsigned long paddr, size_t size)
++int omap_vram_add_region(unsigned long paddr, size_t size)
 +{
 +	struct vram_region *rm;
 +	unsigned pages;
 +
-+	DBG("adding region paddr %08lx size %d\n",
-+			paddr, size);
++	if (vram_initialized) {
++		DBG("adding region paddr %08lx size %d\n",
++				paddr, size);
 +
-+	size &= PAGE_MASK;
-+	pages = size >> PAGE_SHIFT;
++		size &= PAGE_MASK;
++		pages = size >> PAGE_SHIFT;
 +
-+	rm = omap_vram_create_region(paddr, pages);
-+	if (rm == NULL)
-+		return -ENOMEM;
++		rm = omap_vram_create_region(paddr, pages);
++		if (rm == NULL)
++			return -ENOMEM;
 +
-+	list_add(&rm->list, &region_list);
++		list_add(&rm->list, &region_list);
++	} else {
++		if (postponed_cnt == MAX_POSTPONED_REGIONS)
++			return -ENOMEM;
 +
++		postponed_regions[postponed_cnt].paddr = paddr;
++		postponed_regions[postponed_cnt].size = size;
++
++		++postponed_cnt;
++	}
 +	return 0;
 +}
 +
@@ -7761,6 +7884,59 @@ index 0000000..f24a110
 +}
 +EXPORT_SYMBOL(omap_vram_reserve);
 +
++static void _omap_vram_dma_cb(int lch, u16 ch_status, void *data)
++{
++	struct completion *compl = data;
++	complete(compl);
++}
++
++static int _omap_vram_clear(u32 paddr, unsigned pages)
++{
++	struct completion compl;
++        unsigned elem_count;
++        unsigned frame_count;
++	int r;
++	int lch;
++
++	init_completion(&compl);
++
++        r = omap_request_dma(OMAP_DMA_NO_DEVICE, "VRAM DMA",
++			_omap_vram_dma_cb,
++                        &compl, &lch);
++        if (r) {
++		pr_err("VRAM: request_dma failed for memory clear\n");
++		return -EBUSY;
++	}
++
++        elem_count = pages * PAGE_SIZE / 4;
++        frame_count = 1;
++
++        omap_set_dma_transfer_params(lch, OMAP_DMA_DATA_TYPE_S32,
++                        elem_count, frame_count,
++                        OMAP_DMA_SYNC_ELEMENT,
++                        0, 0);
++
++        omap_set_dma_dest_params(lch, 0, OMAP_DMA_AMODE_POST_INC,
++			paddr, 0, 0);
++
++	omap_set_dma_color_mode(lch, OMAP_DMA_CONSTANT_FILL, 0x000000);
++
++        omap_start_dma(lch);
++
++	if (wait_for_completion_timeout(&compl, msecs_to_jiffies(1000)) == 0) {
++		omap_stop_dma(lch);
++		pr_err("VRAM: dma timeout while clearing memory\n");
++		r = -EIO;
++		goto err;
++	}
++
++	r = 0;
++err:
++	omap_free_dma(lch);
++
++	return r;
++}
++
 +static int _omap_vram_alloc(int mtype, unsigned pages, unsigned long *paddr)
 +{
 +	struct vram_region *rm;
@@ -7798,6 +7974,8 @@ index 0000000..f24a110
 +
 +		*paddr = start;
 +
++		_omap_vram_clear(start, pages);
++
 +		return 0;
 +	}
 +
@@ -7826,88 +8004,54 @@ index 0000000..f24a110
 +}
 +EXPORT_SYMBOL(omap_vram_alloc);
 +
-+#ifdef CONFIG_PROC_FS
-+static void *r_next(struct seq_file *m, void *v, loff_t *pos)
-+{
-+	struct list_head *l = v;
-+
-+	(*pos)++;
-+
-+	if (list_is_last(l, &region_list))
-+		return NULL;
-+
-+	return l->next;
-+}
-+
-+static void *r_start(struct seq_file *m, loff_t *pos)
-+{
-+	loff_t p = *pos;
-+	struct list_head *l = &region_list;
-+
-+	mutex_lock(&region_mutex);
-+
-+	do {
-+		l = l->next;
-+		if (l == &region_list)
-+			return NULL;
-+	} while (p--);
-+
-+	return l;
-+}
-+
-+static void r_stop(struct seq_file *m, void *v)
-+{
-+	mutex_unlock(&region_mutex);
-+}
-+
-+static int r_show(struct seq_file *m, void *v)
++#if defined(CONFIG_DEBUG_FS)
++static int vram_debug_show(struct seq_file *s, void *unused)
 +{
 +	struct vram_region *vr;
 +	struct vram_alloc *va;
 +	unsigned size;
 +
-+	vr = list_entry(v, struct vram_region, list);
++	mutex_lock(&region_mutex);
 +
-+	size = vr->pages << PAGE_SHIFT;
-+
-+	seq_printf(m, "%08lx-%08lx (%d bytes)\n",
-+			vr->paddr, vr->paddr + size - 1,
-+			size);
-+
-+	list_for_each_entry(va, &vr->alloc_list, list) {
-+		size = va->pages << PAGE_SHIFT;
-+		seq_printf(m, "    %08lx-%08lx (%d bytes)\n",
-+				va->paddr, va->paddr + size - 1,
++	list_for_each_entry(vr, &region_list, list) {
++		size = vr->pages << PAGE_SHIFT;
++		seq_printf(s, "%08lx-%08lx (%d bytes)\n",
++				vr->paddr, vr->paddr + size - 1,
 +				size);
++
++		list_for_each_entry(va, &vr->alloc_list, list) {
++			size = va->pages << PAGE_SHIFT;
++			seq_printf(s, "    %08lx-%08lx (%d bytes)\n",
++					va->paddr, va->paddr + size - 1,
++					size);
++		}
 +	}
 +
-+
++	mutex_unlock(&region_mutex);
 +
 +	return 0;
 +}
 +
-+static const struct seq_operations resource_op = {
-+	.start	= r_start,
-+	.next	= r_next,
-+	.stop	= r_stop,
-+	.show	= r_show,
-+};
-+
-+static int vram_open(struct inode *inode, struct file *file)
++static int vram_debug_open(struct inode *inode, struct file *file)
 +{
-+	return seq_open(file, &resource_op);
++	return single_open(file, vram_debug_show, inode->i_private);
 +}
 +
-+static const struct file_operations proc_vram_operations = {
-+	.open		= vram_open,
-+	.read		= seq_read,
-+	.llseek		= seq_lseek,
-+	.release	= seq_release,
++static const struct file_operations vram_debug_fops = {
++	.open           = vram_debug_open,
++	.read           = seq_read,
++	.llseek         = seq_lseek,
++	.release        = single_release,
 +};
 +
-+static int __init omap_vram_create_proc(void)
++static int __init omap_vram_create_debugfs(void)
 +{
-+	proc_create("omap-vram", 0, NULL, &proc_vram_operations);
++	struct dentry *d;
++
++	d = debugfs_create_file("vram", S_IRUGO, NULL,
++			NULL, &vram_debug_fops);
++	if (IS_ERR(d))
++		return PTR_ERR(d);
 +
 +	return 0;
 +}
@@ -7915,16 +8059,17 @@ index 0000000..f24a110
 +
 +static __init int omap_vram_init(void)
 +{
-+	int i, r;
++	int i;
++
++	vram_initialized = 1;
 +
 +	for (i = 0; i < postponed_cnt; i++)
 +		omap_vram_add_region(postponed_regions[i].paddr,
 +				postponed_regions[i].size);
 +
-+#ifdef CONFIG_PROC_FS
-+	r = omap_vram_create_proc();
-+	if (r)
-+		return -ENOMEM;
++#ifdef CONFIG_DEBUG_FS
++	if (omap_vram_create_debugfs())
++		pr_err("VRAM: Failed to create debugfs file\n");
 +#endif
 +
 +	return 0;
@@ -7951,10 +8096,6 @@ index 0000000..f24a110
 +	omapfb_def_sdram_vram_size = memparse(*p, p);
 +	if (**p == ',')
 +		omapfb_def_sdram_vram_start = simple_strtoul((*p) + 1, p, 16);
-+
-+	printk("omapfb_early_vram, %d, 0x%x\n",
-+			omapfb_def_sdram_vram_size,
-+			omapfb_def_sdram_vram_start);
 +}
 +__early_param("vram=", omapfb_early_vram);
 +
@@ -8003,7 +8144,10 @@ index 0000000..f24a110
 +			return;
 +		}
 +
-+		reserve_bootmem(paddr, size, BOOTMEM_DEFAULT);
++		if (reserve_bootmem(paddr, size, BOOTMEM_EXCLUSIVE) < 0) {
++			pr_err("FB: failed to reserve VRAM\n");
++			return;
++		}
 +	} else {
 +		if (size > sdram_size) {
 +			printk(KERN_ERR "Illegal SDRAM size for VRAM\n");
@@ -8014,7 +8158,7 @@ index 0000000..f24a110
 +		BUG_ON(paddr & ~PAGE_MASK);
 +	}
 +
-+	omap_vram_add_region_postponed(paddr, size);
++	omap_vram_add_region(paddr, size);
 +
 +	pr_info("Reserving %u bytes SDRAM for VRAM\n", size);
 +}
@@ -8070,7 +8214,7 @@ index 0000000..f24a110
 +		reserved = pend_avail - paddr;
 +	size_avail = pend_avail - reserved - pstart_avail;
 +
-+	omap_vram_add_region_postponed(paddr, size);
++	omap_vram_add_region(paddr, size);
 +
 +	if (reserved)
 +		pr_info("Reserving %lu bytes SRAM for VRAM\n", reserved);
@@ -8094,10 +8238,10 @@ index 0000000..f24a110
 +
 diff --git a/arch/arm/plat-omap/vrfb.c b/arch/arm/plat-omap/vrfb.c
 new file mode 100644
-index 0000000..7e0f8fc
+index 0000000..2ae0d68
 --- /dev/null
 +++ b/arch/arm/plat-omap/vrfb.c
-@@ -0,0 +1,159 @@
+@@ -0,0 +1,187 @@
 +#include <linux/kernel.h>
 +#include <linux/module.h>
 +#include <linux/ioport.h>
@@ -8105,7 +8249,6 @@ index 0000000..7e0f8fc
 +
 +#include <mach/io.h>
 +#include <mach/vrfb.h>
-+
 +/*#define DEBUG*/
 +
 +#ifdef DEBUG
@@ -8116,8 +8259,8 @@ index 0000000..7e0f8fc
 +
 +#define SMS_ROT_VIRT_BASE(context, rot) \
 +	(((context >= 4) ? 0xD0000000 : 0x70000000) \
-+	 | 0x4000000 * (context) \
-+	 | 0x1000000 * (rot))
++	 + (0x4000000 * (context)) \
++	 + (0x1000000 * (rot)))
 +
 +#define OMAP_VRFB_SIZE			(2048 * 2048 * 4)
 +
@@ -8150,15 +8293,44 @@ index 0000000..7e0f8fc
 +
 +void omap_vrfb_setup(struct vrfb *vrfb, unsigned long paddr,
 +		u16 width, u16 height,
-+		u8 bytespp)
++		enum omap_color_mode color_mode)
 +{
 +	unsigned pixel_size_exp;
 +	u16 vrfb_width;
 +	u16 vrfb_height;
 +	u8 ctx = vrfb->context;
++	u8 bytespp;
 +
 +	DBG("omapfb_set_vrfb(%d, %lx, %dx%d, %d)\n", ctx, paddr,
 +			width, height, bytespp);
++
++	switch (color_mode) {
++	case OMAP_DSS_COLOR_RGB16:
++	case OMAP_DSS_COLOR_ARGB16:
++		bytespp = 2;
++		break;
++
++	case OMAP_DSS_COLOR_RGB24P:
++		bytespp = 3;
++		break;
++
++	case OMAP_DSS_COLOR_RGB24U:
++	case OMAP_DSS_COLOR_ARGB32:
++	case OMAP_DSS_COLOR_RGBA32:
++	case OMAP_DSS_COLOR_RGBX32:
++	case OMAP_DSS_COLOR_YUV2:
++	case OMAP_DSS_COLOR_UYVY:
++		bytespp = 4;
++		break;
++
++	default:
++		BUG();
++		return;
++	}
++
++	if (color_mode == OMAP_DSS_COLOR_YUV2 ||
++			color_mode == OMAP_DSS_COLOR_UYVY)
++		width >>= 1;
 +
 +	if (bytespp == 4)
 +		pixel_size_exp = 2;
@@ -11311,10 +11483,10 @@ index 0000000..ae7cd06
 +
 diff --git a/drivers/video/omap2/dss/dispc.c b/drivers/video/omap2/dss/dispc.c
 new file mode 100644
-index 0000000..ae7be3d
+index 0000000..f79decb
 --- /dev/null
 +++ b/drivers/video/omap2/dss/dispc.c
-@@ -0,0 +1,3127 @@
+@@ -0,0 +1,3278 @@
 +/*
 + * linux/drivers/video/omap2/dss/dispc.c
 + *
@@ -12095,6 +12267,17 @@ index 0000000..ae7be3d
 +	dispc_write_reg(vsi_reg[plane-1], val);
 +}
 +
++static void _dispc_setup_global_alpha(enum omap_plane plane, u8 global_alpha)
++{
++
++	BUG_ON(plane == OMAP_DSS_VIDEO1);
++
++	if (plane == OMAP_DSS_GFX)
++		REG_FLD_MOD(DISPC_GLOBAL_ALPHA, global_alpha, 7, 0);
++	else if (plane == OMAP_DSS_VIDEO2)
++		REG_FLD_MOD(DISPC_GLOBAL_ALPHA, global_alpha, 23, 16);
++}
++
 +static void _dispc_set_pix_inc(enum omap_plane plane, s32 inc)
 +{
 +	const struct dispc_reg ri_reg[] = { DISPC_GFX_PIXEL_INC,
@@ -12311,7 +12494,10 @@ index 0000000..ae7be3d
 +
 +	BUG_ON(plane == OMAP_DSS_GFX);
 +
-+	val = FLD_VAL(vinc, 27, 16) | FLD_VAL(hinc, 11, 0);
++	if (cpu_is_omap24xx())
++		val = FLD_VAL(vinc, 27, 16) | FLD_VAL(hinc, 11, 0);
++	else
++		val = FLD_VAL(vinc, 28, 16) | FLD_VAL(hinc, 12, 0);
 +	dispc_write_reg(fir_reg[plane-1], val);
 +}
 +
@@ -12343,12 +12529,12 @@ index 0000000..ae7be3d
 +static void _dispc_set_scaling(enum omap_plane plane,
 +		u16 orig_width, u16 orig_height,
 +		u16 out_width, u16 out_height,
-+		bool ilace, bool five_taps)
++		bool ilace, bool five_taps,
++		bool fieldmode)
 +{
 +	int fir_hinc;
 +	int fir_vinc;
 +	int hscaleup, vscaleup;
-+	int fieldmode = 0;
 +	int accu0 = 0;
 +	int accu1 = 0;
 +	u32 l;
@@ -12386,17 +12572,16 @@ index 0000000..ae7be3d
 +
 +	dispc_write_reg(dispc_reg_att[plane], l);
 +
-+	if (ilace) {
-+		if (fieldmode) {
-+			accu0 = fir_vinc / 2;
-+			accu1 = 0;
-+		} else {
-+			accu0 = 0;
-+			accu1 = fir_vinc / 2;
-+			if (accu1 >= 1024/2) {
-+				accu0 = 1024/2;
-+				accu1 -= accu0;
-+			}
++	/*
++	 * field 0 = even field = bottom field
++	 * field 1 = odd field = top field
++	 */
++	if (ilace && !fieldmode) {
++		accu1 = 0;
++		accu0 = fir_vinc / 2;
++		if (accu0 >= 1024/2) {
++			accu1 = 1024/2;
++			accu0 -= accu1;
 +		}
 +	}
 +
@@ -12414,16 +12599,16 @@ index 0000000..ae7be3d
 +		if (mirroring) {
 +			switch (rotation) {
 +			case 0: vidrot = 2; break;
-+			case 1: vidrot = 3; break;
++			case 1: vidrot = 1; break;
 +			case 2: vidrot = 0; break;
-+			case 3: vidrot = 1; break;
++			case 3: vidrot = 3; break;
 +			}
 +		} else {
 +			switch (rotation) {
 +			case 0: vidrot = 0; break;
 +			case 1: vidrot = 1; break;
 +			case 2: vidrot = 2; break;
-+			case 3: vidrot = 1; break;
++			case 3: vidrot = 3; break;
 +			}
 +		}
 +
@@ -12451,7 +12636,92 @@ index 0000000..ae7be3d
 +		BUG();
 +}
 +
-+static void calc_rotation_offset(u8 rotation, bool mirror,
++static void calc_vrfb_rotation_offset(u8 rotation, bool mirror,
++		u16 screen_width,
++		u16 width, u16 height,
++		enum omap_color_mode color_mode, bool fieldmode,
++		unsigned *offset0, unsigned *offset1,
++		s32 *row_inc, s32 *pix_inc)
++{
++	u8 ps;
++
++	switch (color_mode) {
++	case OMAP_DSS_COLOR_RGB16:
++	case OMAP_DSS_COLOR_ARGB16:
++		ps = 2;
++		break;
++
++	case OMAP_DSS_COLOR_RGB24P:
++		ps = 3;
++		break;
++
++	case OMAP_DSS_COLOR_RGB24U:
++	case OMAP_DSS_COLOR_ARGB32:
++	case OMAP_DSS_COLOR_RGBA32:
++	case OMAP_DSS_COLOR_RGBX32:
++	case OMAP_DSS_COLOR_YUV2:
++	case OMAP_DSS_COLOR_UYVY:
++		ps = 4;
++		break;
++
++	default:
++		BUG();
++		return;
++	}
++
++	DSSDBG("calc_rot(%d): scrw %d, %dx%d\n", rotation, screen_width,
++			width, height);
++	switch (rotation + mirror * 4) {
++	case 0:
++	case 2:
++		/*
++		 * If the pixel format is YUV or UYVY divide the width
++		 * of the image by 2 for 0 and 180 degree rotation.
++		 */
++		if (color_mode == OMAP_DSS_COLOR_YUV2 ||
++			color_mode == OMAP_DSS_COLOR_UYVY)
++			width = width >> 1;
++	case 1:
++	case 3:
++		*offset0 = 0;
++		if (fieldmode)
++			*offset1 = screen_width * ps;
++		else
++			*offset1 = 0;
++
++		*row_inc = pixinc(1 + (screen_width - width) +
++				(fieldmode ? screen_width : 0),
++				ps);
++		*pix_inc = pixinc(1, ps);
++		break;
++
++	case 4:
++	case 6:
++		/* If the pixel format is YUV or UYVY divide the width
++		 * of the image by 2  for 0 degree and 180 degree
++		 */
++		if (color_mode == OMAP_DSS_COLOR_YUV2 ||
++			color_mode == OMAP_DSS_COLOR_UYVY)
++			width = width >> 1;
++	case 5:
++	case 7:
++		*offset0 = 0;
++		if (fieldmode)
++			*offset1 = screen_width * ps;
++		else
++			*offset1 = 0;
++		*row_inc = pixinc(1 - (screen_width + width) -
++				(fieldmode ? screen_width : 0),
++				ps);
++		*pix_inc = pixinc(1, ps);
++		break;
++
++	default:
++		BUG();
++	}
++}
++
++static void calc_dma_rotation_offset(u8 rotation, bool mirror,
 +		u16 screen_width,
 +		u16 width, u16 height,
 +		enum omap_color_mode color_mode, bool fieldmode,
@@ -12500,34 +12770,38 @@ index 0000000..ae7be3d
 +		fbh = width;
 +	}
 +
++	/*
++	 * field 0 = even field = bottom field
++	 * field 1 = odd field = top field
++	 */
 +	switch (rotation + mirror * 4) {
 +	case 0:
-+		*offset0 = 0;
++		*offset1 = 0;
 +		if (fieldmode)
-+			*offset1 = screen_width * ps;
++			*offset0 = screen_width * ps;
 +		else
-+			*offset1 = 0;
++			*offset0 = 0;
 +		*row_inc = pixinc(1 + (screen_width - fbw) +
 +				(fieldmode ? screen_width : 0),
 +				ps);
 +		*pix_inc = pixinc(1, ps);
 +		break;
 +	case 1:
-+		*offset0 = screen_width * (fbh - 1) * ps;
++		*offset1 = screen_width * (fbh - 1) * ps;
 +		if (fieldmode)
-+			*offset1 = *offset0 + ps;
++			*offset0 = *offset1 + ps;
 +		else
-+			*offset1 = *offset0;
++			*offset0 = *offset1;
 +		*row_inc = pixinc(screen_width * (fbh - 1) + 1 +
 +				(fieldmode ? 1 : 0), ps);
 +		*pix_inc = pixinc(-screen_width, ps);
 +		break;
 +	case 2:
-+		*offset0 = (screen_width * (fbh - 1) + fbw - 1) * ps;
++		*offset1 = (screen_width * (fbh - 1) + fbw - 1) * ps;
 +		if (fieldmode)
-+			*offset1 = *offset0 - screen_width * ps;
++			*offset0 = *offset1 - screen_width * ps;
 +		else
-+			*offset1 = *offset0;
++			*offset0 = *offset1;
 +		*row_inc = pixinc(-1 -
 +				(screen_width - fbw) -
 +				(fieldmode ? screen_width : 0),
@@ -12535,11 +12809,11 @@ index 0000000..ae7be3d
 +		*pix_inc = pixinc(-1, ps);
 +		break;
 +	case 3:
-+		*offset0 = (fbw - 1) * ps;
++		*offset1 = (fbw - 1) * ps;
 +		if (fieldmode)
-+			*offset1 = *offset0 - ps;
++			*offset0 = *offset1 - ps;
 +		else
-+			*offset1 = *offset0;
++			*offset0 = *offset1;
 +		*row_inc = pixinc(-screen_width * (fbh - 1) - 1 -
 +				(fieldmode ? 1 : 0), ps);
 +		*pix_inc = pixinc(screen_width, ps);
@@ -12547,11 +12821,11 @@ index 0000000..ae7be3d
 +
 +	/* mirroring */
 +	case 0 + 4:
-+		*offset0 = (fbw - 1) * ps;
++		*offset1 = (fbw - 1) * ps;
 +		if (fieldmode)
-+			*offset1 = *offset0 + screen_width * ps;
++			*offset0 = *offset1 + screen_width * ps;
 +		else
-+			*offset1 = *offset0;
++			*offset0 = *offset1;
 +		*row_inc = pixinc(screen_width * 2 - 1 +
 +				(fieldmode ? screen_width : 0),
 +				ps);
@@ -12559,11 +12833,11 @@ index 0000000..ae7be3d
 +		break;
 +
 +	case 1 + 4:
-+		*offset0 = 0;
++		*offset1 = 0;
 +		if (fieldmode)
-+			*offset1 = *offset0 + screen_width * ps;
++			*offset0 = *offset1 + screen_width * ps;
 +		else
-+			*offset1 = *offset0;
++			*offset0 = *offset1;
 +		*row_inc = pixinc(-screen_width * (fbh - 1) + 1 +
 +				(fieldmode ? 1 : 0),
 +				ps);
@@ -12571,11 +12845,11 @@ index 0000000..ae7be3d
 +		break;
 +
 +	case 2 + 4:
-+		*offset0 = screen_width * (fbh - 1) * ps;
++		*offset1 = screen_width * (fbh - 1) * ps;
 +		if (fieldmode)
-+			*offset1 = *offset0 + screen_width * ps;
++			*offset0 = *offset1 + screen_width * ps;
 +		else
-+			*offset1 = *offset0;
++			*offset0 = *offset1;
 +		*row_inc = pixinc(1 - screen_width * 2 -
 +				(fieldmode ? screen_width : 0),
 +				ps);
@@ -12583,11 +12857,11 @@ index 0000000..ae7be3d
 +		break;
 +
 +	case 3 + 4:
-+		*offset0 = (screen_width * (fbh - 1) + fbw - 1) * ps;
++		*offset1 = (screen_width * (fbh - 1) + fbw - 1) * ps;
 +		if (fieldmode)
-+			*offset1 = *offset0 + screen_width * ps;
++			*offset0 = *offset1 + screen_width * ps;
 +		else
-+			*offset1 = *offset0;
++			*offset0 = *offset1;
 +		*row_inc = pixinc(screen_width * (fbh - 1) - 1 -
 +				(fieldmode ? 1 : 0),
 +				ps);
@@ -12634,14 +12908,9 @@ index 0000000..ae7be3d
 +}
 +
 +static unsigned long calc_fclk(u16 width, u16 height,
-+		u16 out_width, u16 out_height,
-+		enum omap_color_mode color_mode, bool five_taps)
++		u16 out_width, u16 out_height)
 +{
 +	unsigned int hf, vf;
-+
-+	if (five_taps)
-+		return calc_fclk_five_taps(width, height,
-+				out_width, out_height, color_mode);
 +
 +	/*
 +	 * FIXME how to determine the 'A' factor
@@ -12674,7 +12943,9 @@ index 0000000..ae7be3d
 +		u16 out_width, u16 out_height,
 +		enum omap_color_mode color_mode,
 +		bool ilace,
-+		u8 rotation, int mirror)
++		enum omap_dss_rotation_type rotation_type,
++		u8 rotation, int mirror,
++		u8 global_alpha)
 +{
 +	const int maxdownscale = cpu_is_omap34xx() ? 4 : 2;
 +	bool five_taps = 0;
@@ -12688,7 +12959,7 @@ index 0000000..ae7be3d
 +	if (paddr == 0)
 +		return -EINVAL;
 +
-+	if (ilace && height >= out_height)
++	if (ilace && height == out_height)
 +		fieldmode = 1;
 +
 +	if (ilace) {
@@ -12722,7 +12993,7 @@ index 0000000..ae7be3d
 +	} else {
 +		/* video plane */
 +
-+		unsigned long fclk;
++		unsigned long fclk = 0;
 +
 +		if (out_width < width / maxdownscale ||
 +		   out_width > width * 8)
@@ -12758,20 +13029,22 @@ index 0000000..ae7be3d
 +		/* Must use 5-tap filter? */
 +		five_taps = height > out_height * 2;
 +
-+		/* Try to use 5-tap filter whenever possible. */
-+		if (cpu_is_omap34xx() && !five_taps &&
-+		    height > out_height && width <= 1024) {
-+			fclk = calc_fclk_five_taps(width, height,
-+					out_width, out_height, color_mode);
-+			if (fclk <= dispc_fclk_rate())
++		if (!five_taps) {
++			fclk = calc_fclk(width, height,
++					out_width, out_height);
++
++			/* Try 5-tap filter if 3-tap fclk is too high */
++			if (cpu_is_omap34xx() && height > out_height &&
++					fclk > dispc_fclk_rate())
 +				five_taps = true;
 +		}
 +
 +		if (width > (2048 >> five_taps))
 +			return -EINVAL;
 +
-+		fclk = calc_fclk(width, height, out_width, out_height,
-+				color_mode, five_taps);
++		if (five_taps)
++			fclk = calc_fclk_five_taps(width, height,
++					out_width, out_height, color_mode);
 +
 +		DSSDBG("required fclk rate = %lu Hz\n", fclk);
 +		DSSDBG("current fclk rate = %lu Hz\n", dispc_fclk_rate());
@@ -12780,10 +13053,16 @@ index 0000000..ae7be3d
 +			return -EINVAL;
 +	}
 +
-+	calc_rotation_offset(rotation, mirror,
-+			screen_width, width, frame_height, color_mode,
-+			fieldmode,
-+			&offset0, &offset1, &row_inc, &pix_inc);
++	if (rotation_type == OMAP_DSS_ROT_DMA)
++		calc_dma_rotation_offset(rotation, mirror,
++				screen_width, width, frame_height, color_mode,
++				fieldmode,
++				&offset0, &offset1, &row_inc, &pix_inc);
++	else
++		calc_vrfb_rotation_offset(rotation, mirror,
++				screen_width, width, frame_height, color_mode,
++				fieldmode,
++				&offset0, &offset1, &row_inc, &pix_inc);
 +
 +	DSSDBG("offset0 %u, offset1 %u, row_inc %d, pix_inc %d\n",
 +			offset0, offset1, row_inc, pix_inc);
@@ -12807,12 +13086,15 @@ index 0000000..ae7be3d
 +	if (plane != OMAP_DSS_GFX) {
 +		_dispc_set_scaling(plane, width, height,
 +				   out_width, out_height,
-+				   ilace, five_taps);
++				   ilace, five_taps, fieldmode);
 +		_dispc_set_vid_size(plane, out_width, out_height);
 +		_dispc_set_vid_color_conv(plane, cconv);
 +	}
 +
 +	_dispc_set_rotation_attrs(plane, rotation, mirror, color_mode);
++
++	if (plane != OMAP_DSS_VIDEO1)
++		_dispc_setup_global_alpha(plane, global_alpha);
 +
 +	return 0;
 +}
@@ -13051,9 +13333,9 @@ index 0000000..ae7be3d
 +	enable_clocks(1);
 +	if (type) {
 +		if (ch == OMAP_DSS_CHANNEL_LCD)
-+			*type = REG_GET(DISPC_CONFIG, 11, 11) >> 11;
++			*type = REG_GET(DISPC_CONFIG, 11, 11);
 +		else if (ch == OMAP_DSS_CHANNEL_DIGIT)
-+			*type = REG_GET(DISPC_CONFIG, 13, 13) >> 13;
++			*type = REG_GET(DISPC_CONFIG, 13, 13);
 +		else
 +			BUG();
 +	}
@@ -13072,6 +13354,32 @@ index 0000000..ae7be3d
 +		REG_FLD_MOD(DISPC_CONFIG, enable, 12, 12);
 +	enable_clocks(0);
 +}
++void dispc_enable_alpha_blending(enum omap_channel ch, bool enable)
++{
++	enable_clocks(1);
++	if (ch == OMAP_DSS_CHANNEL_LCD)
++		REG_FLD_MOD(DISPC_CONFIG, enable, 18, 18);
++	else /* OMAP_DSS_CHANNEL_DIGIT */
++		REG_FLD_MOD(DISPC_CONFIG, enable, 19, 19);
++	enable_clocks(0);
++}
++bool dispc_alpha_blending_enabled(enum omap_channel ch)
++{
++	bool enabled;
++
++	enable_clocks(1);
++	if (ch == OMAP_DSS_CHANNEL_LCD)
++		enabled = REG_GET(DISPC_CONFIG, 18, 18);
++	else if (ch == OMAP_DSS_CHANNEL_DIGIT)
++		enabled = REG_GET(DISPC_CONFIG, 18, 18);
++	else
++		BUG();
++	enable_clocks(0);
++
++	return enabled;
++
++}
++
 +
 +bool dispc_trans_key_enabled(enum omap_channel ch)
 +{
@@ -14108,6 +14416,16 @@ index 0000000..ae7be3d
 +	omap_dispc_set_irqs();
 +}
 +
++void dispc_enable_sidle(void)
++{
++	REG_FLD_MOD(DISPC_SYSCONFIG, 2, 4, 3);	/* SIDLEMODE: smart idle */
++}
++
++void dispc_disable_sidle(void)
++{
++	REG_FLD_MOD(DISPC_SYSCONFIG, 1, 4, 3);	/* SIDLEMODE: no idle */
++}
++
 +static void _omap_dispc_initial_config(void)
 +{
 +	u32 l;
@@ -14196,7 +14514,8 @@ index 0000000..ae7be3d
 +		       u16 out_width, u16 out_height,
 +		       enum omap_color_mode color_mode,
 +		       bool ilace,
-+		       u8 rotation, bool mirror)
++		       enum omap_dss_rotation_type rotation_type,
++		       u8 rotation, bool mirror, u8 global_alpha)
 +{
 +	int r = 0;
 +
@@ -14216,7 +14535,9 @@ index 0000000..ae7be3d
 +			   width, height,
 +			   out_width, out_height,
 +			   color_mode, ilace,
-+			   rotation, mirror);
++			   rotation_type,
++			   rotation, mirror,
++			   global_alpha);
 +
 +	enable_clocks(0);
 +
@@ -14429,8 +14750,10 @@ index 0000000..ae7be3d
 +				pw, ph,
 +				pow, poh,
 +				pi->color_mode, 0,
-+				pi->rotation, // XXX rotation probably wrong
-+				pi->mirror);
++				pi->rotation_type,
++				pi->rotation,
++				pi->mirror,
++				pi->global_alpha);
 +
 +		dispc_enable_plane(ovl->id, 1);
 +	}
@@ -15542,10 +15865,10 @@ index 0000000..71fffca
 +
 diff --git a/drivers/video/omap2/dss/dsi.c b/drivers/video/omap2/dss/dsi.c
 new file mode 100644
-index 0000000..66ac6ea
+index 0000000..d8df353
 --- /dev/null
 +++ b/drivers/video/omap2/dss/dsi.c
-@@ -0,0 +1,3768 @@
+@@ -0,0 +1,3799 @@
 +/*
 + * linux/drivers/video/omap2/dss/dsi.c
 + *
@@ -15837,6 +16160,8 @@ index 0000000..66ac6ea
 +
 +	bool autoupdate_setup;
 +
++	u32		errors;
++	spinlock_t	errors_lock;
 +#ifdef DEBUG
 +	ktime_t perf_setup_time;
 +	ktime_t perf_start_time;
@@ -16089,6 +16414,9 @@ index 0000000..66ac6ea
 +	if (irqstatus & DSI_IRQ_ERROR_MASK) {
 +		DSSERR("DSI error, irqstatus %x\n", irqstatus);
 +		print_irq_status(irqstatus);
++		spin_lock(&dsi.errors_lock);
++		dsi.errors |= irqstatus & DSI_IRQ_ERROR_MASK;
++		spin_unlock(&dsi.errors_lock);
 +	} else if (debug_irq) {
 +		print_irq_status(irqstatus);
 +	}
@@ -16162,6 +16490,17 @@ index 0000000..66ac6ea
 +	   data lines LP0 and LN0. */
 +	dsi_write_reg(DSI_COMPLEXIO_IRQ_ENABLE,
 +			-1 & (~DSI_CIO_IRQ_ERRCONTROL2));
++}
++
++static u32 dsi_get_errors(void)
++{
++	unsigned long flags;
++	u32 e;
++	spin_lock_irqsave(&dsi.errors_lock, flags);
++	e = dsi.errors;
++	dsi.errors = 0;
++	spin_unlock_irqrestore(&dsi.errors_lock, flags);
++	return e;
 +}
 +
 +static void dsi_vc_enable_bta_irq(int channel)
@@ -17355,6 +17694,7 @@ index 0000000..66ac6ea
 +static int dsi_vc_send_bta_sync(int channel)
 +{
 +	int r = 0;
++	u32 err;
 +
 +	init_completion(&dsi.bta_completion);
 +
@@ -17367,6 +17707,13 @@ index 0000000..66ac6ea
 +	if (wait_for_completion_timeout(&dsi.bta_completion,
 +				msecs_to_jiffies(500)) == 0) {
 +		DSSERR("Failed to receive BTA\n");
++		r = -EIO;
++		goto err;
++	}
++
++	err = dsi_get_errors();
++	if (err) {
++		DSSERR("Error while sending BTA: %x\n", err);
 +		r = -EIO;
 +		goto err;
 +	}
@@ -18213,6 +18560,8 @@ index 0000000..66ac6ea
 +		l = FLD_MOD(l, 1, 31, 31); /* TE_START */
 +	dsi_write_reg(DSI_VC_TE(1), l);
 +
++	dispc_disable_sidle();
++
 +	dispc_enable_lcd_out(1);
 +
 +	if (dsi.use_te)
@@ -18225,6 +18574,8 @@ index 0000000..66ac6ea
 +		DSSERR("Framedone already scheduled. Bogus FRAMEDONE IRQ?\n");
 +		return;
 +	}
++
++	dispc_enable_sidle();
 +
 +	dsi.framedone_scheduled = 1;
 +
@@ -18760,7 +19111,7 @@ index 0000000..66ac6ea
 +
 +static int dsi_wait_sync(struct omap_display *display)
 +{
-+	long wait = msecs_to_jiffies(60000);
++	long wait = msecs_to_jiffies(2000);
 +	struct completion compl;
 +
 +	DSSDBGF("");
@@ -19264,6 +19615,9 @@ index 0000000..66ac6ea
 +{
 +	u32 rev;
 +
++	spin_lock_init(&dsi.errors_lock);
++	dsi.errors = 0;
++
 +	spin_lock_init(&dsi.cmd_lock);
 +	dsi.cmd_fifo = kfifo_alloc(
 +			DSI_CMD_FIFO_LEN * sizeof(struct dsi_cmd_item),
@@ -19316,10 +19670,10 @@ index 0000000..66ac6ea
 +
 diff --git a/drivers/video/omap2/dss/dss.c b/drivers/video/omap2/dss/dss.c
 new file mode 100644
-index 0000000..adc1f34
+index 0000000..aab9758
 --- /dev/null
 +++ b/drivers/video/omap2/dss/dss.c
-@@ -0,0 +1,345 @@
+@@ -0,0 +1,347 @@
 +/*
 + * linux/drivers/video/omap2/dss/dss.c
 + *
@@ -19607,6 +19961,11 @@ index 0000000..adc1f34
 +	}
 +
 +	if (!skip_init) {
++		/* disable LCD and DIGIT output. This seems to fix the synclost
++		 * problem that we get, if the bootloader starts the DSS and
++		 * the kernel resets it */
++		omap_writel(omap_readl(0x48050440) & ~0x3, 0x48050440);
++
 +		/* We need to wait here a bit, otherwise we sometimes start to
 +		 * get synclost errors, and after that only power cycle will
 +		 * restore DSS functionality. I have no idea why this happens.
@@ -19616,10 +19975,7 @@ index 0000000..adc1f34
 +		msleep(50);
 +
 +		_omap_dss_reset();
-+
 +	}
-+	else
-+		printk("DSS SKIP RESET\n");
 +
 +	/* autoidle */
 +	REG_FLD_MOD(DSS_SYSCONFIG, 1, 0, 0);
@@ -19667,10 +20023,10 @@ index 0000000..adc1f34
 +
 diff --git a/drivers/video/omap2/dss/dss.h b/drivers/video/omap2/dss/dss.h
 new file mode 100644
-index 0000000..0be42b6
+index 0000000..20cef0a
 --- /dev/null
 +++ b/drivers/video/omap2/dss/dss.h
-@@ -0,0 +1,332 @@
+@@ -0,0 +1,339 @@
 +/*
 + * linux/drivers/video/omap2/dss/dss.h
 + *
@@ -19917,6 +20273,9 @@ index 0000000..0be42b6
 +void dispc_save_context(void);
 +void dispc_restore_context(void);
 +
++void dispc_enable_sidle(void);
++void dispc_disable_sidle(void);
++
 +void dispc_lcd_enable_signal_polarity(bool act_high);
 +void dispc_lcd_enable_signal(bool enable);
 +void dispc_pck_free_enable(bool enable);
@@ -19942,7 +20301,9 @@ index 0000000..0be42b6
 +		      u16 out_width, u16 out_height,
 +		      enum omap_color_mode color_mode,
 +		      bool ilace,
-+		      u8 rotation, bool mirror);
++		      enum omap_dss_rotation_type rotation_type,
++		      u8 rotation, bool mirror,
++		      u8 global_alpha);
 +
 +void dispc_go(enum omap_channel channel);
 +void dispc_enable_lcd_out(bool enable);
@@ -19963,7 +20324,9 @@ index 0000000..0be42b6
 +		enum omap_dss_color_key_type *type,
 +		u32 *trans_key);
 +void dispc_enable_trans_key(enum omap_channel ch, bool enable);
++void dispc_enable_alpha_blending(enum omap_channel ch, bool enable);
 +bool dispc_trans_key_enabled(enum omap_channel ch);
++bool dispc_alpha_blending_enabled(enum omap_channel ch);
 +
 +void dispc_set_lcd_timings(struct omap_video_timings *timings);
 +unsigned long dispc_fclk_rate(void);
@@ -20005,10 +20368,10 @@ index 0000000..0be42b6
 +#endif
 diff --git a/drivers/video/omap2/dss/manager.c b/drivers/video/omap2/dss/manager.c
 new file mode 100644
-index 0000000..b0fee80
+index 0000000..1e6cd8d
 --- /dev/null
 +++ b/drivers/video/omap2/dss/manager.c
-@@ -0,0 +1,576 @@
+@@ -0,0 +1,680 @@
 +/*
 + * linux/drivers/video/omap2/dss/manager.c
 + *
@@ -20109,10 +20472,8 @@ index 0000000..b0fee80
 +static ssize_t manager_default_color_show(struct omap_overlay_manager *mgr,
 +					  char *buf)
 +{
-+	u32 default_color;
-+
-+	default_color = dispc_get_default_color(mgr->id);
-+	return snprintf(buf, PAGE_SIZE, "%d", default_color);
++	return snprintf(buf, PAGE_SIZE, "%d",
++			mgr->get_default_color(mgr));
 +}
 +
 +static ssize_t manager_default_color_store(struct omap_overlay_manager *mgr,
@@ -20137,7 +20498,7 @@ index 0000000..b0fee80
 +{
 +	enum omap_dss_color_key_type key_type;
 +
-+	dispc_get_trans_key(mgr->id, &key_type, NULL);
++	mgr->get_trans_key_type_and_value(mgr, &key_type, NULL);
 +	BUG_ON(key_type >= ARRAY_SIZE(color_key_type_str));
 +
 +	return snprintf(buf, PAGE_SIZE, "%s\n", color_key_type_str[key_type]);
@@ -20150,14 +20511,28 @@ index 0000000..b0fee80
 +	u32 key_value;
 +
 +	for (key_type = OMAP_DSS_COLOR_KEY_GFX_DST;
-+	     key_type < ARRAY_SIZE(color_key_type_str); key_type++) {
++			key_type < ARRAY_SIZE(color_key_type_str); key_type++) {
 +		if (sysfs_streq(buf, color_key_type_str[key_type]))
 +			break;
 +	}
 +	if (key_type == ARRAY_SIZE(color_key_type_str))
 +		return -EINVAL;
-+	dispc_get_trans_key(mgr->id, NULL, &key_value);
-+	dispc_set_trans_key(mgr->id, key_type, key_value);
++	/* OMAP does not support destination color key and alpha blending
++	 * simultaneously.  So if alpha blending and color keying both are
++	 * enabled then refrain from setting the color key type to
++	 * gfx-destination
++	 */
++	if (!key_type) {
++		bool color_key_enabled;
++		bool alpha_blending_enabled;
++		color_key_enabled = mgr->get_trans_key_status(mgr);
++		alpha_blending_enabled = mgr->get_alpha_blending_status(mgr);
++		if (color_key_enabled && alpha_blending_enabled)
++			return -EINVAL;
++	}
++
++	mgr->get_trans_key_type_and_value(mgr, NULL, &key_value);
++	mgr->set_trans_key_type_and_value(mgr, key_type, key_value);
 +
 +	return size;
 +}
@@ -20167,7 +20542,7 @@ index 0000000..b0fee80
 +{
 +	u32 key_value;
 +
-+	dispc_get_trans_key(mgr->id, NULL, &key_value);
++	 mgr->get_trans_key_type_and_value(mgr, NULL, &key_value);
 +
 +	return snprintf(buf, PAGE_SIZE, "%d\n", key_value);
 +}
@@ -20180,8 +20555,8 @@ index 0000000..b0fee80
 +
 +	if (sscanf(buf, "%d", &key_value) != 1)
 +		return -EINVAL;
-+	dispc_get_trans_key(mgr->id, &key_type, NULL);
-+	dispc_set_trans_key(mgr->id, key_type, key_value);
++	mgr->get_trans_key_type_and_value(mgr, &key_type, NULL);
++	mgr->set_trans_key_type_and_value(mgr, key_type, key_value);
 +
 +	return size;
 +}
@@ -20190,7 +20565,7 @@ index 0000000..b0fee80
 +					      char *buf)
 +{
 +	return snprintf(buf, PAGE_SIZE, "%d\n",
-+			dispc_trans_key_enabled(mgr->id));
++	mgr->get_trans_key_status(mgr));
 +}
 +
 +static ssize_t manager_color_key_enabled_store(struct omap_overlay_manager *mgr,
@@ -20201,8 +20576,58 @@ index 0000000..b0fee80
 +	if (sscanf(buf, "%d", &enable) != 1)
 +		return -EINVAL;
 +
-+	dispc_enable_trans_key(mgr->id, enable);
++	/* OMAP does not support destination color keying and
++	 * alpha blending simultaneously.  so if alpha blending
++	 * is enabled refrain from enabling destination color
++	 * keying.
++	 */
++	if (enable) {
++		bool enabled;
++		enabled = mgr->get_alpha_blending_status(mgr);
++		if (enabled) {
++			enum omap_dss_color_key_type key_type;
++			mgr->get_trans_key_type_and_value(mgr,
++					&key_type, NULL);
++			if (!key_type)
++				return -EINVAL;
++		}
 +
++	}
++	mgr->enable_trans_key(mgr, enable);
++
++	return size;
++}
++static ssize_t manager_alpha_blending_enabled_show(
++		struct omap_overlay_manager *mgr, char *buf)
++{
++	return snprintf(buf, PAGE_SIZE, "%d\n",
++			mgr->get_alpha_blending_status(mgr));
++}
++static ssize_t manager_alpha_blending_enabled_store(
++		struct omap_overlay_manager *mgr,
++		const char *buf, size_t size)
++{
++	int enable;
++	if (sscanf(buf, "%d", &enable) != 1)
++		return -EINVAL;
++	/* OMAP does not support destination color keying and
++	 * alpha blending simultaneously.  so if destination
++	 * color keying is enabled refrain from enabling
++	 * alpha blending
++	 */
++	if (enable) {
++		bool enabled;
++		enabled = mgr->get_trans_key_status(mgr);
++		if (enabled) {
++			enum omap_dss_color_key_type key_type;
++			mgr->get_trans_key_type_and_value(mgr, &key_type, NULL);
++			if (!key_type)
++				return -EINVAL;
++
++		}
++
++	}
++	mgr->enable_alpha_blending(mgr, enable);
 +	return size;
 +}
 +
@@ -20228,6 +20653,10 @@ index 0000000..b0fee80
 +		manager_color_key_value_show, manager_color_key_value_store);
 +static MANAGER_ATTR(color_key_enabled, S_IRUGO|S_IWUSR,
 +		manager_color_key_enabled_show, manager_color_key_enabled_store);
++static MANAGER_ATTR(alpha_blending_enabled, S_IRUGO|S_IWUSR,
++		manager_alpha_blending_enabled_show,
++		manager_alpha_blending_enabled_store);
++
 +
 +static struct attribute *manager_sysfs_attrs[] = {
 +	&manager_attr_name.attr,
@@ -20236,6 +20665,7 @@ index 0000000..b0fee80
 +	&manager_attr_color_key_type.attr,
 +	&manager_attr_color_key_value.attr,
 +	&manager_attr_color_key_enabled.attr,
++	&manager_attr_alpha_blending_enabled.attr,
 +	NULL
 +};
 +
@@ -20406,8 +20836,10 @@ index 0000000..b0fee80
 +				outh,
 +				ovl->info.color_mode,
 +				ilace,
++				ovl->info.rotation_type,
 +				ovl->info.rotation,
-+				ovl->info.mirror);
++				ovl->info.mirror,
++				ovl->info.global_alpha);
 +
 +		if (r) {
 +			DSSERR("dispc_setup_plane failed for ovl %d\n",
@@ -20468,17 +20900,43 @@ index 0000000..b0fee80
 +	dispc_set_default_color(mgr->id, color);
 +}
 +
-+static void omap_dss_mgr_set_trans_key(struct omap_overlay_manager *mgr,
++static void omap_dss_mgr_set_trans_key_type_and_value(
++		struct omap_overlay_manager *mgr,
 +		enum omap_dss_color_key_type type,
 +		u32 trans_key)
 +{
 +	dispc_set_trans_key(mgr->id, type, trans_key);
++}
++static void omap_dss_mgr_get_trans_key_type_and_value(
++		struct omap_overlay_manager *mgr,
++		enum omap_dss_color_key_type *type,
++		u32 *trans_key)
++{
++	dispc_get_trans_key(mgr->id, type, trans_key);
 +}
 +
 +static void omap_dss_mgr_enable_trans_key(struct omap_overlay_manager *mgr,
 +		bool enable)
 +{
 +	dispc_enable_trans_key(mgr->id, enable);
++}
++static void omap_dss_mgr_enable_alpha_blending(struct omap_overlay_manager *mgr,
++		bool enable)
++{
++	dispc_enable_alpha_blending(mgr->id, enable);
++}
++static bool omap_dss_mgr_get_alpha_blending_status(
++		struct omap_overlay_manager *mgr)
++{
++	return dispc_alpha_blending_enabled(mgr->id);
++}
++static u32 omap_dss_mgr_get_default_color(struct omap_overlay_manager *mgr)
++{
++	return dispc_get_default_color(mgr->id);
++}
++static bool omap_dss_mgr_get_trans_key_status(struct omap_overlay_manager *mgr)
++{
++	return dispc_trans_key_enabled(mgr->id);
 +}
 +
 +static void omap_dss_add_overlay_manager(struct omap_overlay_manager *manager)
@@ -20516,13 +20974,22 @@ index 0000000..b0fee80
 +			break;
 +		}
 +
-+		mgr->set_display = &omap_dss_set_display,
-+		mgr->unset_display = &omap_dss_unset_display,
-+		mgr->apply = &omap_dss_mgr_apply,
-+		mgr->set_default_color = &omap_dss_mgr_set_def_color,
-+		mgr->set_trans_key = &omap_dss_mgr_set_trans_key,
-+		mgr->enable_trans_key = &omap_dss_mgr_enable_trans_key,
-+		mgr->caps = OMAP_DSS_OVL_MGR_CAP_DISPC,
++		mgr->set_display = &omap_dss_set_display;
++		mgr->unset_display = &omap_dss_unset_display;
++		mgr->apply = &omap_dss_mgr_apply;
++		mgr->set_default_color = &omap_dss_mgr_set_def_color;
++		mgr->set_trans_key_type_and_value =
++			&omap_dss_mgr_set_trans_key_type_and_value;
++		mgr->get_trans_key_type_and_value =
++			&omap_dss_mgr_get_trans_key_type_and_value;
++		mgr->enable_trans_key = &omap_dss_mgr_enable_trans_key;
++		mgr->get_trans_key_status = &omap_dss_mgr_get_trans_key_status;
++		mgr->enable_alpha_blending =
++			&omap_dss_mgr_enable_alpha_blending;
++		mgr->get_alpha_blending_status =
++			omap_dss_mgr_get_alpha_blending_status;
++		mgr->get_default_color = &omap_dss_mgr_get_default_color;
++		mgr->caps = OMAP_DSS_OVL_MGR_CAP_DISPC;
 +
 +		dss_overlay_setup_dispc_manager(mgr);
 +
@@ -20587,10 +21054,10 @@ index 0000000..b0fee80
 +
 diff --git a/drivers/video/omap2/dss/overlay.c b/drivers/video/omap2/dss/overlay.c
 new file mode 100644
-index 0000000..c047206
+index 0000000..035a57a
 --- /dev/null
 +++ b/drivers/video/omap2/dss/overlay.c
-@@ -0,0 +1,592 @@
+@@ -0,0 +1,629 @@
 +/*
 + * linux/drivers/video/omap2/dss/overlay.c
 + *
@@ -20787,6 +21254,37 @@ index 0000000..c047206
 +	return size;
 +}
 +
++static ssize_t overlay_global_alpha_show(struct omap_overlay *ovl, char *buf)
++{
++	return snprintf(buf, PAGE_SIZE, "%d\n",
++			ovl->info.global_alpha);
++}
++
++static ssize_t overlay_global_alpha_store(struct omap_overlay *ovl,
++		const char *buf, size_t size)
++{
++	int r;
++	struct omap_overlay_info info;
++
++	ovl->get_overlay_info(ovl, &info);
++
++	/* Video1 plane does not support global alpha
++	 * to always make it 255 completely opaque
++	 */
++	if (ovl->id == OMAP_DSS_VIDEO1)
++		info.global_alpha = 255;
++	else
++		info.global_alpha = simple_strtoul(buf, NULL, 10);
++
++	if ((r = ovl->set_overlay_info(ovl, &info)))
++		return r;
++
++	if (ovl->manager && (r = ovl->manager->apply(ovl->manager)))
++		return r;
++
++	return size;
++}
++
 +struct overlay_attribute {
 +	struct attribute attr;
 +	ssize_t (*show)(struct omap_overlay *, char *);
@@ -20808,6 +21306,8 @@ index 0000000..c047206
 +		overlay_output_size_show, overlay_output_size_store);
 +static OVERLAY_ATTR(enabled, S_IRUGO|S_IWUSR,
 +		overlay_enabled_show, overlay_enabled_store);
++static OVERLAY_ATTR(global_alpha, S_IRUGO|S_IWUSR,
++		overlay_global_alpha_show, overlay_global_alpha_store);
 +
 +static struct attribute *overlay_sysfs_attrs[] = {
 +	&overlay_attr_name.attr,
@@ -20817,6 +21317,7 @@ index 0000000..c047206
 +	&overlay_attr_position.attr,
 +	&overlay_attr_output_size.attr,
 +	&overlay_attr_enabled.attr,
++	&overlay_attr_global_alpha.attr,
 +	NULL
 +};
 +
@@ -21037,6 +21538,7 @@ index 0000000..c047206
 +			ovl->id = OMAP_DSS_GFX;
 +			ovl->supported_modes = OMAP_DSS_COLOR_GFX_OMAP3;
 +			ovl->caps = OMAP_DSS_OVL_CAP_DISPC;
++			ovl->info.global_alpha = 255;
 +			break;
 +		case 1:
 +			ovl->name = "vid1";
@@ -21044,6 +21546,7 @@ index 0000000..c047206
 +			ovl->supported_modes = OMAP_DSS_COLOR_VID_OMAP3;
 +			ovl->caps = OMAP_DSS_OVL_CAP_SCALE |
 +				OMAP_DSS_OVL_CAP_DISPC;
++			ovl->info.global_alpha = 255;
 +			break;
 +		case 2:
 +			ovl->name = "vid2";
@@ -21051,6 +21554,7 @@ index 0000000..c047206
 +			ovl->supported_modes = OMAP_DSS_COLOR_VID_OMAP3;
 +			ovl->caps = OMAP_DSS_OVL_CAP_SCALE |
 +				OMAP_DSS_OVL_CAP_DISPC;
++			ovl->info.global_alpha = 255;
 +			break;
 +		}
 +
@@ -23456,10 +23960,10 @@ index 0000000..51c2e00
 +omapfb-y := omapfb-main.o omapfb-sysfs.o omapfb-ioctl.o
 diff --git a/drivers/video/omap2/omapfb/omapfb-ioctl.c b/drivers/video/omap2/omapfb/omapfb-ioctl.c
 new file mode 100644
-index 0000000..7f18d2a
+index 0000000..79d8916
 --- /dev/null
 +++ b/drivers/video/omap2/omapfb/omapfb-ioctl.c
-@@ -0,0 +1,656 @@
+@@ -0,0 +1,659 @@
 +/*
 + * linux/drivers/video/omap2/omapfb-ioctl.c
 + *
@@ -23750,7 +24254,8 @@ index 0000000..7f18d2a
 +{
 +	enum omap_dss_color_key_type kt;
 +
-+	if(!mgr->set_default_color || !mgr->set_trans_key ||
++	if (!mgr->set_default_color ||
++			!mgr->set_trans_key_type_and_value ||
 +			!mgr->enable_trans_key)
 +		return 0;
 +
@@ -23772,7 +24277,7 @@ index 0000000..7f18d2a
 +	}
 +
 +	mgr->set_default_color(mgr, ck->background);
-+	mgr->set_trans_key(mgr, kt, ck->trans_key);
++	mgr->set_trans_key_type_and_value(mgr, kt, ck->trans_key);
 +	mgr->enable_trans_key(mgr, 1);
 +
 +	omapfb_color_keys[mgr->id] = *ck;
@@ -23803,7 +24308,8 @@ index 0000000..7f18d2a
 +		goto err;
 +	}
 +
-+	if(!mgr->set_default_color || !mgr->set_trans_key ||
++	if (!mgr->set_default_color ||
++			!mgr->set_trans_key_type_and_value ||
 +			!mgr->enable_trans_key) {
 +		r = -ENODEV;
 +		goto err;
@@ -23839,7 +24345,8 @@ index 0000000..7f18d2a
 +		goto err;
 +	}
 +
-+	if(!mgr->set_default_color || !mgr->set_trans_key ||
++	if (!mgr->set_default_color ||
++			!mgr->set_trans_key_type_and_value ||
 +			!mgr->enable_trans_key) {
 +		r = -ENODEV;
 +		goto err;
@@ -24118,10 +24625,10 @@ index 0000000..7f18d2a
 +
 diff --git a/drivers/video/omap2/omapfb/omapfb-main.c b/drivers/video/omap2/omapfb/omapfb-main.c
 new file mode 100644
-index 0000000..12ce0c3
+index 0000000..76e7c6c
 --- /dev/null
 +++ b/drivers/video/omap2/omapfb/omapfb-main.c
-@@ -0,0 +1,2018 @@
+@@ -0,0 +1,2124 @@
 +/*
 + * linux/drivers/video/omap2/omapfb-main.c
 + *
@@ -24300,15 +24807,9 @@ index 0000000..12ce0c3
 +
 +static u32 omapfb_get_region_rot_paddr(struct omapfb_info *ofbi)
 +{
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB) {
-+		unsigned offset;
-+		int rot;
-+
-+		rot = ofbi->rotation;
-+
-+		offset = omapfb_get_vrfb_offset(ofbi, rot);
-+
-+		return ofbi->region.vrfb.paddr[rot] + offset;
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB) {
++		return ofbi->region.vrfb.paddr[ofbi->rotation]
++			+ omapfb_get_vrfb_offset(ofbi, ofbi->rotation);
 +	} else {
 +		return ofbi->region.paddr;
 +	}
@@ -24316,7 +24817,7 @@ index 0000000..12ce0c3
 +
 +u32 omapfb_get_region_paddr(struct omapfb_info *ofbi)
 +{
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB)
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB)
 +		return ofbi->region.vrfb.paddr[0];
 +	else
 +		return ofbi->region.paddr;
@@ -24324,7 +24825,7 @@ index 0000000..12ce0c3
 +
 +void __iomem *omapfb_get_region_vaddr(struct omapfb_info *ofbi)
 +{
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB)
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB)
 +		return ofbi->region.vrfb.vaddr[0];
 +	else
 +		return ofbi->region.vaddr;
@@ -24494,6 +24995,21 @@ index 0000000..12ce0c3
 +	return -EINVAL;
 +}
 +
++static int dss_mode_to_fb_mode(enum omap_color_mode dssmode,
++			       struct fb_var_screeninfo *var)
++{
++	int i;
++
++	for (i = 0; i < ARRAY_SIZE(omapfb_colormodes); ++i) {
++		struct omapfb_colormode *mode = &omapfb_colormodes[i];
++		if (dssmode == mode->dssmode) {
++			assign_colormode_to_var(var, mode);
++			return 0;
++		}
++	}
++	return -ENOENT;
++}
++
 +void set_fb_fix(struct fb_info *fbi)
 +{
 +	struct fb_fix_screeninfo *fix = &fbi->fix;
@@ -24507,10 +25023,19 @@ index 0000000..12ce0c3
 +	fbi->screen_base = (char __iomem *)omapfb_get_region_vaddr(ofbi);
 +
 +	/* used by mmap in fbmem.c */
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB)
-+		fix->line_length =
-+			(OMAP_VRFB_LINE_LEN * var->bits_per_pixel) >> 3;
-+	else
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB) {
++		switch (var->nonstd) {
++		case OMAPFB_COLOR_YUV422:
++		case OMAPFB_COLOR_YUY422:
++			fix->line_length =
++				(OMAP_VRFB_LINE_LEN * var->bits_per_pixel) >> 2;
++			break;
++		default:
++			fix->line_length =
++				(OMAP_VRFB_LINE_LEN * var->bits_per_pixel) >> 3;
++			break;
++		}
++	} else
 +		fix->line_length =
 +			(var->xres_virtual * var->bits_per_pixel) >> 3;
 +	fix->smem_start = omapfb_get_region_paddr(ofbi);
@@ -24543,11 +25068,14 @@ index 0000000..12ce0c3
 +	fix->xpanstep = 1;
 +	fix->ypanstep = 1;
 +
-+	if (rg->size) {
-+		if (ofbi->rotation_type == OMAPFB_ROT_VRFB)
-+			omap_vrfb_setup(&rg->vrfb, rg->paddr,
-+					var->xres_virtual, var->yres_virtual,
-+					var->bits_per_pixel >> 3);
++	if (rg->size && ofbi->rotation_type == OMAP_DSS_ROT_VRFB) {
++		enum omap_color_mode mode = 0;
++		mode = fb_mode_to_dss_mode(var);
++
++		omap_vrfb_setup(&rg->vrfb, rg->paddr,
++				var->xres_virtual,
++				var->yres_virtual,
++				mode);
 +	}
 +}
 +
@@ -24636,7 +25164,7 @@ index 0000000..12ce0c3
 +	if (var->yres > var->yres_virtual)
 +		var->yres = var->yres_virtual;
 +
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB)
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB)
 +		line_size = OMAP_VRFB_LINE_LEN * bytespp;
 +	else
 +		line_size = var->xres_virtual * bytespp;
@@ -24658,7 +25186,7 @@ index 0000000..12ce0c3
 +
 +	if (line_size * var->yres_virtual > max_frame_size) {
 +		DBG("can't fit FB into memory, reducing x\n");
-+		if (ofbi->rotation_type == OMAPFB_ROT_VRFB)
++		if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB)
 +			return -EINVAL;
 +
 +		var->xres_virtual = max_frame_size / var->yres_virtual /
@@ -24781,7 +25309,7 @@ index 0000000..12ce0c3
 +	struct omap_overlay_info info;
 +	int xres, yres;
 +	int screen_width;
-+	int rot, mirror;
++	int mirror;
 +
 +	DBG("setup_overlay %d, posx %d, posy %d, outw %d, outh %d\n", ofbi->id,
 +			posx, posy, outw, outh);
@@ -24797,7 +25325,7 @@ index 0000000..12ce0c3
 +	offset = ((var->yoffset * var->xres_virtual +
 +				var->xoffset) * var->bits_per_pixel) >> 3;
 +
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB) {
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB) {
 +		data_start_p = omapfb_get_region_rot_paddr(ofbi);
 +		data_start_v = NULL;
 +	} else {
@@ -24816,17 +25344,25 @@ index 0000000..12ce0c3
 +		goto err;
 +	}
 +
-+	screen_width = fix->line_length / (var->bits_per_pixel >> 3);
++	switch (var->nonstd) {
++	case OMAPFB_COLOR_YUV422:
++	case OMAPFB_COLOR_YUY422:
++		if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB) {
++			screen_width = fix->line_length
++				/ (var->bits_per_pixel >> 2);
++			break;
++		}
++	default:
++		screen_width = fix->line_length / (var->bits_per_pixel >> 3);
++		break;
++	}
 +
 +	ovl->get_overlay_info(ovl, &info);
 +
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB) {
-+		rot = 0;
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB)
 +		mirror = 0;
-+	} else {
-+		rot = ofbi->rotation;
++	else
 +		mirror = ofbi->mirror;
-+	}
 +
 +	info.paddr = data_start_p;
 +	info.vaddr = data_start_v;
@@ -24834,7 +25370,8 @@ index 0000000..12ce0c3
 +	info.width = xres;
 +	info.height = yres;
 +	info.color_mode = mode;
-+	info.rotation = rot;
++	info.rotation_type = ofbi->rotation_type;
++	info.rotation = ofbi->rotation;
 +	info.mirror = mirror;
 +
 +	info.pos_x = posx;
@@ -25230,7 +25767,7 @@ index 0000000..12ce0c3
 +	if (rg->vaddr)
 +		iounmap(rg->vaddr);
 +
-+	if (ofbi->rotation_type == OMAPFB_ROT_VRFB) {
++	if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB) {
 +		/* unmap the 0 angle rotation */
 +		if (rg->vrfb.vaddr[0]) {
 +			iounmap(rg->vrfb.vaddr[0]);
@@ -25268,7 +25805,6 @@ index 0000000..12ce0c3
 +	struct omapfb2_mem_region *rg;
 +	void __iomem *vaddr;
 +	int r;
-+	int clear = 0;
 +
 +	rg = &ofbi->region;
 +	memset(rg, 0, sizeof(*rg));
@@ -25278,7 +25814,6 @@ index 0000000..12ce0c3
 +	if (!paddr) {
 +		DBG("allocating %lu bytes for fb %d\n", size, ofbi->id);
 +		r = omap_vram_alloc(OMAPFB_MEMTYPE_SDRAM, size, &paddr);
-+		clear = 1;
 +	} else {
 +		DBG("reserving %lu bytes at %lx for fb %d\n", size, paddr,
 +				ofbi->id);
@@ -25290,7 +25825,7 @@ index 0000000..12ce0c3
 +		return -ENOMEM;
 +	}
 +
-+	if (ofbi->rotation_type != OMAPFB_ROT_VRFB) {
++	if (ofbi->rotation_type != OMAP_DSS_ROT_VRFB) {
 +		vaddr = ioremap_wc(paddr, size);
 +
 +		if (!vaddr) {
@@ -25300,9 +25835,6 @@ index 0000000..12ce0c3
 +		}
 +
 +		DBG("allocated VRAM paddr %lx, vaddr %p\n", paddr, vaddr);
-+
-+		if (clear)
-+			memset_io(vaddr, 0, size);
 +	} else {
 +		void __iomem *va;
 +
@@ -25326,9 +25858,6 @@ index 0000000..12ce0c3
 +		rg->vrfb.vaddr[0] = va;
 +
 +		vaddr = NULL;
-+
-+		if (clear)
-+			memset_io(va, 0, size);
 +	}
 +
 +	rg->paddr = paddr;
@@ -25369,7 +25898,7 @@ index 0000000..12ce0c3
 +
 +		display->get_resolution(display, &w, &h);
 +
-+		if (ofbi->rotation_type == OMAPFB_ROT_VRFB) {
++		if (ofbi->rotation_type == OMAP_DSS_ROT_VRFB) {
 +#ifdef DEBUG
 +			int oldw = w, oldh = h;
 +#endif
@@ -25389,6 +25918,60 @@ index 0000000..12ce0c3
 +	}
 +
 +	return omapfb_alloc_fbmem(fbi, size, paddr);
++}
++
++static enum omap_color_mode fb_format_to_dss_mode(enum omapfb_color_format format)
++{
++	enum omap_color_mode mode;
++
++	switch (format) {
++	case OMAPFB_COLOR_RGB565:
++		mode = OMAP_DSS_COLOR_RGB16;
++		break;
++	case OMAPFB_COLOR_YUV422:
++		mode = OMAP_DSS_COLOR_YUV2;
++		break;
++	case OMAPFB_COLOR_CLUT_8BPP:
++		mode = OMAP_DSS_COLOR_CLUT8;
++		break;
++	case OMAPFB_COLOR_CLUT_4BPP:
++		mode = OMAP_DSS_COLOR_CLUT4;
++		break;
++	case OMAPFB_COLOR_CLUT_2BPP:
++		mode = OMAP_DSS_COLOR_CLUT2;
++		break;
++	case OMAPFB_COLOR_CLUT_1BPP:
++		mode = OMAP_DSS_COLOR_CLUT1;
++		break;
++	case OMAPFB_COLOR_RGB444:
++		mode = OMAP_DSS_COLOR_RGB12U;
++		break;
++	case OMAPFB_COLOR_YUY422:
++		mode = OMAP_DSS_COLOR_UYVY;
++		break;
++	case OMAPFB_COLOR_ARGB16:
++		mode = OMAP_DSS_COLOR_ARGB16;
++		break;
++	case OMAPFB_COLOR_RGB24U:
++		mode = OMAP_DSS_COLOR_RGB24U;
++		break;
++	case OMAPFB_COLOR_RGB24P:
++		mode = OMAP_DSS_COLOR_RGB24P;
++		break;
++	case OMAPFB_COLOR_ARGB32:
++		mode = OMAP_DSS_COLOR_ARGB32;
++		break;
++	case OMAPFB_COLOR_RGBA32:
++		mode = OMAP_DSS_COLOR_RGBA32;
++		break;
++	case OMAPFB_COLOR_RGBX32:
++		mode = OMAP_DSS_COLOR_RGBX32;
++		break;
++	default:
++		mode = -EINVAL;
++	}
++
++	return mode;
 +}
 +
 +static int omapfb_parse_vram_param(const char *param, int max_entries,
@@ -25607,8 +26190,35 @@ index 0000000..12ce0c3
 +	}
 +
 +	var->nonstd = 0;
++	var->bits_per_pixel = 0;
 +
 +	var->rotate = ofbi->rotation;
++
++	/*
++	 * Check if there is a default color format set in the board file,
++	 * and use this format instead the default deducted from the
++	 * display bpp.
++	 */
++	if (fbdev->dev->platform_data) {
++		struct omapfb_platform_data *opd;
++		int id = ofbi->id;
++
++		opd = fbdev->dev->platform_data;
++		if (opd->mem_desc.region[id].format_used) {
++			enum omap_color_mode mode;
++			enum omapfb_color_format format;
++
++			format = opd->mem_desc.region[id].format;
++			mode = fb_format_to_dss_mode(format);
++			if (mode < 0) {
++				r = mode;
++				goto err;
++			}
++			r = dss_mode_to_fb_mode(mode, var);
++			if (r < 0)
++				goto err;
++		}
++	}
 +
 +	if (display) {
 +		u16 w, h;
@@ -25626,16 +26236,18 @@ index 0000000..12ce0c3
 +		var->xres_virtual = var->xres;
 +		var->yres_virtual = var->yres;
 +
-+		switch (display->get_recommended_bpp(display)) {
-+		case 16:
-+			var->bits_per_pixel = 16;
-+			break;
-+		case 24:
-+			var->bits_per_pixel = 32;
-+			break;
-+		default:
-+			dev_err(fbdev->dev, "illegal display bpp\n");
-+			return -EINVAL;
++		if (!var->bits_per_pixel) {
++			switch (display->get_recommended_bpp(display)) {
++				case 16:
++					var->bits_per_pixel = 16;
++					break;
++				case 24:
++					var->bits_per_pixel = 32;
++					break;
++				default:
++					dev_err(fbdev->dev, "illegal display bpp\n");
++					return -EINVAL;
++			}
 +		}
 +	} else {
 +		/* if there's no display, let's just guess some basic values */
@@ -25643,7 +26255,8 @@ index 0000000..12ce0c3
 +		var->yres = 240;
 +		var->xres_virtual = var->xres;
 +		var->yres_virtual = var->yres;
-+		var->bits_per_pixel = 16;
++		if (!var->bits_per_pixel)
++			var->bits_per_pixel = 16;
 +	}
 +
 +	r = check_fb_var(fbi, var);
@@ -25726,8 +26339,8 @@ index 0000000..12ce0c3
 +		ofbi->id = i;
 +
 +		/* assign these early, so that fb alloc can use them */
-+		ofbi->rotation_type = def_vrfb ? OMAPFB_ROT_VRFB :
-+			OMAPFB_ROT_DMA;
++		ofbi->rotation_type = def_vrfb ? OMAP_DSS_ROT_VRFB :
++			OMAP_DSS_ROT_DMA;
 +		ofbi->rotation = def_rotate;
 +		ofbi->mirror = def_mirror;
 +
@@ -26142,10 +26755,10 @@ index 0000000..12ce0c3
 +MODULE_LICENSE("GPL v2");
 diff --git a/drivers/video/omap2/omapfb/omapfb-sysfs.c b/drivers/video/omap2/omapfb/omapfb-sysfs.c
 new file mode 100644
-index 0000000..2c88718
+index 0000000..13028ae
 --- /dev/null
 +++ b/drivers/video/omap2/omapfb/omapfb-sysfs.c
-@@ -0,0 +1,371 @@
+@@ -0,0 +1,410 @@
 +/*
 + * linux/drivers/video/omap2/omapfb-sysfs.c
 + *
@@ -26190,6 +26803,45 @@ index 0000000..2c88718
 +
 +	return snprintf(buf, PAGE_SIZE, "%d\n", ofbi->rotation_type);
 +}
++
++static ssize_t store_rotate_type(struct device *dev,
++		struct device_attribute *attr,
++		const char *buf, size_t count)
++{
++	struct fb_info *fbi = dev_get_drvdata(dev);
++	struct omapfb_info *ofbi = FB2OFB(fbi);
++	struct omapfb2_device *fbdev = ofbi->fbdev;
++	enum omap_dss_rotation_type rot_type;
++	int r;
++
++	rot_type = simple_strtoul(buf, NULL, 0);
++
++	if (rot_type != OMAP_DSS_ROT_DMA && rot_type != OMAP_DSS_ROT_VRFB)
++		return -EINVAL;
++
++	omapfb_lock(fbdev);
++
++	r = 0;
++	if (rot_type == ofbi->rotation_type)
++		goto out;
++
++	if (ofbi->region.size) {
++		r = -EBUSY;
++		goto out;
++	}
++
++	ofbi->rotation_type = rot_type;
++
++	/*
++	 * Since the VRAM for this FB is not allocated at the moment we don't need to
++	 * do any further parameter checking at this point.
++	 */
++out:
++	omapfb_unlock(fbdev);
++
++	return r ? r : count;
++}
++
 +
 +static ssize_t show_mirror(struct device *dev,
 +		struct device_attribute *attr, char *buf)
@@ -26475,7 +27127,7 @@ index 0000000..2c88718
 +}
 +
 +static struct device_attribute omapfb_attrs[] = {
-+	__ATTR(rotate_type, S_IRUGO, show_rotate_type, NULL),
++	__ATTR(rotate_type, S_IRUGO | S_IWUSR, show_rotate_type, store_rotate_type),
 +	__ATTR(mirror, S_IRUGO | S_IWUSR, show_mirror, store_mirror),
 +	__ATTR(size, S_IRUGO | S_IWUSR, show_size, store_size),
 +	__ATTR(overlays, S_IRUGO | S_IWUSR, show_overlays, store_overlays),
@@ -26519,10 +27171,10 @@ index 0000000..2c88718
 +
 diff --git a/drivers/video/omap2/omapfb/omapfb.h b/drivers/video/omap2/omapfb/omapfb.h
 new file mode 100644
-index 0000000..65e9e6e
+index 0000000..43f6922
 --- /dev/null
 +++ b/drivers/video/omap2/omapfb/omapfb.h
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,150 @@
 +/*
 + * linux/drivers/video/omap2/omapfb.h
 + *
@@ -26552,6 +27204,8 @@ index 0000000..65e9e6e
 +#define DEBUG
 +#endif
 +
++#include <mach/display.h>
++
 +#ifdef DEBUG
 +extern unsigned int omapfb_debug;
 +#define DBG(format, ...) \
@@ -26576,11 +27230,6 @@ index 0000000..65e9e6e
 +	bool		map;		/* kernel mapped by the driver */
 +};
 +
-+enum omapfb_rotation_type {
-+	OMAPFB_ROT_DMA = 0,
-+	OMAPFB_ROT_VRFB = 1,
-+};
-+
 +/* appended to fb_info */
 +struct omapfb_info {
 +	int id;
@@ -26589,7 +27238,7 @@ index 0000000..65e9e6e
 +	int num_overlays;
 +	struct omap_overlay *overlays[OMAPFB_MAX_OVL_PER_FB];
 +	struct omapfb2_device *fbdev;
-+	enum omapfb_rotation_type rotation_type;
++	enum omap_dss_rotation_type rotation_type;
 +	u8 rotation;
 +	bool mirror;
 +};
@@ -26678,10 +27327,10 @@ index 0000000..65e9e6e
 +#endif
 diff --git a/include/linux/omapfb.h b/include/linux/omapfb.h
 new file mode 100644
-index 0000000..96190b2
+index 0000000..7a34f22
 --- /dev/null
 +++ b/include/linux/omapfb.h
-@@ -0,0 +1,418 @@
+@@ -0,0 +1,423 @@
 +/*
 + * File: arch/arm/plat-omap/include/mach/omapfb.h
 + *
@@ -26982,6 +27631,11 @@ index 0000000..96190b2
 +	void __iomem	*vaddr;
 +	unsigned long	size;
 +	u8		type;		/* OMAPFB_PLANE_MEM_* */
++	enum omapfb_color_format format;/* OMAPFB_COLOR_* */
++	unsigned	format_used:1;	/* Must be set when format is set.
++					 * Needed b/c of the badly chosen 0
++					 * base for OMAPFB_COLOR_* values
++					 */
 +	unsigned	alloc:1;	/* allocated by the driver */
 +	unsigned	map:1;		/* kernel mapped by the driver */
 +};

@@ -40,12 +40,11 @@ def base_path_relative(src, dest):
     return sep.join(relpath)
 
 # for MD5/SHA handling
-def base_chk_load_parser(config_path):
+def base_chk_load_parser(config_paths):
     import ConfigParser, os, bb
     parser = ConfigParser.ConfigParser()
-    if not len(parser.read(config_path)) == 1:
-        bb.note("Can not open the '%s' ini file" % config_path)
-        raise Exception("Can not open the '%s'" % config_path)
+    if len(parser.read(config_paths)) < 1:
+        raise ValueError("no ini files could be found")
 
     return parser
 
@@ -126,9 +125,11 @@ def base_dep_prepend(d):
 	# the case where host == build == target, for now we don't work in
 	# that case though.
 	#
-	deps = "shasum-native "
-	if bb.data.getVar('PN', d, True) == "shasum-native":
+	deps = "shasum-native coreutils-native"
+	if bb.data.getVar('PN', d, True) == "shasum-native" or bb.data.getVar('PN', d, True) == "stagemanager-native":
 		deps = ""
+	if bb.data.getVar('PN', d, True) == "coreutils-native":
+		deps = "shasum-native"
 
 	# INHIBIT_DEFAULT_DEPS doesn't apply to the patch command.  Whether or  not
 	# we need that built is the responsibility of the patch function / class, not
@@ -620,13 +621,18 @@ python base_do_fetch() {
 
 	# Verify the SHA and MD5 sums we have in OE and check what do
 	# in
-	check_sum = bb.which(bb.data.getVar('BBPATH', d, True), "conf/checksums.ini")
-	if not check_sum:
+	checksum_paths = bb.data.getVar('BBPATH', d, True).split(":")
+
+	# reverse the list to give precedence to directories that
+	# appear first in BBPATH
+	checksum_paths.reverse()
+
+	checksum_files = ["%s/conf/checksums.ini" % path for path in checksum_paths]
+	try:
+		parser = base_chk_load_parser(checksum_files)
+	except ValueError:
 		bb.note("No conf/checksums.ini found, not checking checksums")
 		return
-
-	try:
-		parser = base_chk_load_parser(check_sum)
 	except:
 		bb.note("Creating the CheckSum parser failed")
 		return
