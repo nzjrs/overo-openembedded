@@ -6,6 +6,9 @@ PR = "r0"
 
 DEPENDS = "ncurses"
 
+#Fix the GNU_HAS QA build error
+TARGET_CC_ARCH += " ${LDFLAGS}"
+
 SRC_URI = " \
     http://www.latencytop.org/download/latencytop-${PV}.tar.gz \
     file://dont-hardcode-gcc.patch;patch=1 \
