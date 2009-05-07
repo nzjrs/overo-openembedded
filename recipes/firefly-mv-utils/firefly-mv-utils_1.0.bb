@@ -3,7 +3,7 @@ HOMEPAGE = "http://github.com/nzjrs/firefly-mv/tree/master"
 SECTION = "console/utils"
 PRIORITY = "optional"
 LICENSE = "GPL"
-PR = "r6"
+PR = "r7"
 
 DEPENDS = "libdc1394 gtk+"
 
@@ -12,7 +12,7 @@ DEPENDS = "libdc1394 gtk+"
 CFLAGS_append = " $(pkg-config --cflags gtk+-2.0)"
 LIBS_append = " $(pkg-config --libs gtk+-2.0)"
 
-SRCREV = "271a9283aeb3706cc840f47d765ca9e7bbb90a99"
+SRCREV = "778d62c142221e878a3e09a931165bad43e97540"
 SRC_URI = "git://github.com/nzjrs/firefly-mv.git;protocol=git;branch=master"
 
 inherit pkgconfig

@@ -3,7 +3,7 @@ HOMEPAGE = "http://github.com/nzjrs/firefly-mv/tree/master"
 SECTION = "console/utils"
 PRIORITY = "optional"
 LICENSE = "GPL"
-PR = "r0"
+PR = "r1"
 
 DEPENDS = "libdc1394 gtk+"
 
@@ -12,7 +12,7 @@ DEPENDS = "libdc1394 gtk+"
 CFLAGS_append = " $(pkg-config --cflags gtk+-2.0)"
 LIBS_append = " $(pkg-config --libs gtk+-2.0)"
 
-SRCREV = "c5525373ed46b5b2c5fe21c4ed4c95558bef069c"
+SRCREV = "98e7aeeca1dbce9b818daaa71a20b9912f303d2f"
 SRC_URI = "git://github.com/nzjrs/firefly-mv.git;protocol=git;branch=emav09"
 
 inherit pkgconfig
@@ -27,4 +27,5 @@ do_install () {
 	install -d ${D}${bindir}
 	install -m 0755 pprz-record ${D}${bindir}/
 	install -m 0755 pprz-play ${D}${bindir}/
+	install -m 0755 pprz-to-image-files ${D}${bindir}/
 }
