@@ -17,7 +17,7 @@ PSTAGE_EXTRAPATH  ?= "/${OELAYOUT_ABI}/${DISTRO_PR}/"
 PSTAGE_PKGPATH    = "${DISTRO}${PSTAGE_EXTRAPATH}"
 PSTAGE_PKGPN      = "${@bb.data.expand('staging-${PN}-${MULTIMACH_ARCH}${TARGET_VENDOR}-${TARGET_OS}', d).replace('_', '-')}"
 PSTAGE_PKGNAME    = "${PSTAGE_PKGPN}_${PSTAGE_PKGVERSION}_${PSTAGE_PKGARCH}.ipk"
-PSTAGE_PKG        = "${DEPLOY_DIR_PSTAGE}/${PSTAGE_PKGPATH}/${PSTAGE_PKGNAME}"
+PSTAGE_PKG        ?= "${DEPLOY_DIR_PSTAGE}/${PSTAGE_PKGPATH}/${PSTAGE_PKGNAME}"
 
 PSTAGE_NATIVEDEPENDS = "\
     shasum-native \
@@ -109,17 +109,17 @@ def pstage_cleanpackage(pkgname, d):
 	pstage_set_pkgmanager(d)
 	list_cmd = bb.data.getVar("PSTAGE_LIST_CMD", d, True)
 
-	bb.note("Checking if staging package installed")
+	bb.debug(2, "Checking if staging package installed")
 	lf = bb.utils.lockfile(bb.data.expand("${STAGING_DIR}/staging.lock", d))
 	ret = os.system("PATH=\"%s\" %s | grep %s" % (path, list_cmd, pkgname))
 	if ret == 0:
-		bb.note("Yes. Uninstalling package from staging...")
+		bb.debug(1, "Uninstalling package from staging...")
 		removecmd = bb.data.getVar("PSTAGE_REMOVE_CMD", d, 1)
 		ret = os.system("PATH=\"%s\" %s %s" % (path, removecmd, pkgname))
 		if ret != 0:
 			bb.note("Failure removing staging package")
 	else:
-		bb.note("No. Manually removing any installed files")
+		bb.debug(1, "Manually removing any installed files from staging...")
 		pstage_manualclean("staging", "STAGING_DIR", d)
 		pstage_manualclean("cross", "CROSS_DIR", d)
 		pstage_manualclean("deploy", "DEPLOY_DIR", d)
@@ -135,7 +135,7 @@ do_clean_prepend() {
 	pstage_cleanpackage(removepkg, d)
 
 	stagepkg = bb.data.expand("${PSTAGE_PKG}", d)
-	bb.note("Removing staging package %s" % stagepkg)
+	bb.note("Removing staging package %s" % base_path_out(stagepkg, d))
 	os.system('rm -rf ' + stagepkg)
 }
 

@@ -8,6 +8,7 @@ COMPATIBLE_MACHINE = "omap5912osk|omap1710h3|omap2430sdp|omap2420h4|beagleboard|
 DEFAULT_PREFERENCE = "-1"
 DEFAULT_PREFERENCE_overo = "1"
 DEFAULT_PREFERENCE_beagleboard = "1"
+DEFAULT_PREFERENCE_omap3evm = "1"
 
 SRCREV = "58cf2f1425abfd3a449f9fe985e48be2d2555022"
 
@@ -75,6 +76,24 @@ SRC_URI_append = " \
            file://dss2/0051-DSS2-VRAM-use-debugfs-not-procfs.patch;patch=1 \
            file://dss2/0052-DSS2-VRAM-fix-section-mismatch-warning.patch;patch=1 \
            file://dss2/0053-DSS2-disable-LCD-DIGIT-before-resetting-DSS.patch;patch=1 \
+           file://dss2/0054-DSS2-DSI-more-error-handling.patch;patch=1 \
+           file://dss2/0055-DSS2-Added-global-alpha-support.patch;patch=1 \
+           file://dss2/0056-DSS2-Rotation-attrs-for-YUV-need-not-to-be-reversed.patch;patch=1 \
+           file://dss2/0057-DSS2-Documentation-update-for-new-sysfs-entries-in.patch;patch=1 \
+           file://dss2/0058-DSS2-Don-t-touch-plane-coordinates-when-changing-fb.patch;patch=1 \
+           file://dss2/0059-DSS2-DSI-configure-ENTER-EXIT_HS_MODE_LATENCY.patch;patch=1 \
+           file://dss2/0060-DSS2-Avoid-div-by-zero-when-calculating-required-fc.patch;patch=1 \
+           file://dss2/0061-DSS2-VRFB-save-restore-context.patch;patch=1 \
+           file://dss2/0062-DSS2-VRAM-Fix-indentation.patch;patch=1 \
+           file://dss2/0063-DSS2-fix-the-usage-of-get_last_off_on_transaction_i.patch;patch=1 \
+           file://dss2/0064-VRFB-fix-debug-messages.patch;patch=1 \
+           file://dss2/0065-VRFB-add-suspend-resume-functionality.patch;patch=1 \
+           file://dss2/0066-DSS2-DSI-tune-the-timings-to-be-more-relaxed.patch;patch=1 \
+           file://dss2/0067-DSS2-VRFB-don-t-WARN-when-releasing-inactive-ctx.patch;patch=1 \
+           file://dss2/0068-DSS2-Swap-field-offset-values-w-VRFB-rotation.patch;patch=1 \
+           file://dss2/0069-DSS2-OMAP3EVM-Added-DSI-powerup-and-powerdown-func.patch;patch=1 \
+           file://dss2/0070-DSS2-fix-irq1.diff;patch=1 \
+           file://dss2/0071-DSS2-fix-irq2.diff;patch=1 \
            file://0001-board-ldp-add-regulator-info-to-get-the-microSD-slo.patch;patch=1 \
            file://fix-unaligned-access.diff;patch=1 \
            file://make-alignment-visible.diff;patch=1 \
@@ -133,16 +152,22 @@ SRC_URI_append = " \
            file://isp/omap3camera/0007-omap3isp-Add-CSI2-interface-support.patch;patch=1 \
            file://isp/omap3camera/0008-omap3isp-Add-ISP-tables.patch;patch=1 \
            file://isp/omap3camera/0009-omap34xxcam-Add-camera-driver.patch;patch=1 \
-#           file://isp/base/0001-omap3-Add-base-address-definitions-and-resources-fo.patch;patch=1 \
-#           file://isp/standalone/0001-Resizer-and-Previewer-driver-added-to-commit.patch;patch=1 \
-#           file://isp/standalone/0002-Resizer-bug-fixes-on-top-of-1.0.2-release.patch;patch=1 \
+           file://isp/resizer/0023-OMAP-Resizer-Basic-Resizer-refreshed-with-latest-gi.patch;patch=1 \
+           file://isp/resizer/0024-OMAP3-Resizer-V4L2-buf-layer-issues-fixed.patch;patch=1 \
+           file://isp/resizer/0025-OMAP3-Resizer-Build-issues-fixed.patch;patch=1 \
            file://0124-leds-gpio-broken-with-current-git.patch;patch=1 \
            file://modedb-hd720.patch;patch=1 \
+           file://0001-implement-TIF_RESTORE_SIGMASK-support-and-enable-the.patch;patch=1 \
+           file://vfp/02-vfp-ptrace.patch;patch=1 \
+           file://vfp/03-vfp-corruption.patch;patch=1 \
+           file://vfp/04-vfp-threads.patch;patch=1 \
+           file://vfp/05-vfp-signal-handlers.patch;patch=1 \
 "
 
 
 SRC_URI_append_beagleboard = " file://logo_linux_clut224.ppm \
 			                   file://beagle-asoc.patch;patch=1 \
+                               file://tincantools-puppy.diff;patch=1 \
 "
 
 SRC_URI_append_omap3evm = " \
@@ -152,6 +177,14 @@ SRC_URI_append_omap3evm = " \
 
 
 S = "${WORKDIR}/git"
+
+do_install_append() {
+        install -d ${D}/boot
+        install -m 0644 Documentation/arm/OMAP/DSS ${D}/boot || true
+}
+
+PACKAGES =+ "omap-dss-doc"
+FILES_omap-dss-doc = "/boot/DSS"
 
 
 module_autoload_ohci-hcd_omap5912osk = "ohci-hcd"

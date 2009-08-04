@@ -5,8 +5,9 @@
 # To make use of this class, add to your local.conf:
 #
 # INHERIT += "oestats-client"
-# OESTATS_SERVER = "some.server.org"
+# OESTATS_SERVER = "http://some.server.org"
 # OESTATS_BUILDER = "some_nickname"
+# 
 
 def oestats_setid(d, val):
 	import bb
@@ -18,8 +19,9 @@ def oestats_getid(d):
 	f = file(bb.data.getVar('TMPDIR', d, True) + '/oestats.id', 'r')
 	return f.read()
 	
-def oestats_send(server, action, vars = {}, files = {}):
-	import httplib
+def oestats_send(d, server, action, vars = {}, files = {}):
+	import bb
+	import urllib2
 
 	# build body
 	output = []
@@ -48,12 +50,12 @@ def oestats_send(server, action, vars = {}, files = {}):
 		"Content-type": "multipart/form-data; boundary=%s" % bound,
 		"Content-length": str(len(body))}
 
-	# send request
-	conn = httplib.HTTPConnection(server)
-	conn.request("POST", action, body, headers)
-	response = conn.getresponse()
+	# send request using urllib2, proxies should be auto-detected
+	actionURL = "%s%s" %(server, action)
+	req = urllib2.Request(actionURL, body, headers);
+	response = urllib2.urlopen(req)
 	data = response.read()
-	conn.close()
+	
 	return data
 
 def oestats_start(server, builder, d):
@@ -64,7 +66,7 @@ def oestats_start(server, builder, d):
 	# send report
 	id = ""
 	try:
-		data = oestats_send(server, "/builds/", {
+		data = oestats_send(d, server, "/builds/", {
 			'builder': builder,
 			'build_arch': bb.data.getVar('BUILD_ARCH', d, True),
 			'metadata_branch': bb.data.getVar('METADATA_BRANCH', d, True),
@@ -97,11 +99,11 @@ def oestats_stop(server, d, failures):
 		status = "Succeeded"		      
 
 	try:
-		response = oestats_send(server, "/builds/%s/" % id, {
+		response = oestats_send(d, server, "/builds/%s/" % id, {
 			'status': status,
 		})
 		if status == 'Failed':
-			bb.note("oestats: build failed, see http://%s%s" % (server,response))
+			bb.note("oestats: build failed, see %s%s" % (server, response))
 	except:
 		bb.note("oestats: error stopping build")
 
@@ -157,9 +159,9 @@ def oestats_task(server, d, task, status):
 
 	# send report
 	try:
-		response = oestats_send(server, "/tasks/", vars, files)
+		response = oestats_send(d, server, "/tasks/", vars, files)
 		if status == 'Failed':
-			bb.note("oestats: task failed, see http://%s%s" % (server, response))
+			bb.note("oestats: task failed, see %s%s" % (server, response))
 	except:
 		bb.note("oestats: error sending task, disabling stats")
 		oestats_setid(d, "")
@@ -174,6 +176,8 @@ python oestats_eventhandler () {
 		return NotHandled
 
 	server = bb.data.getVar('OESTATS_SERVER', e.data, True)
+	if not server.startswith('http://') and not server.startswith('https://'):
+		server = "http://%s" %(server)
 	builder = bb.data.getVar('OESTATS_BUILDER', e.data, True)
 	if not server or not builder:
 		return NotHandled

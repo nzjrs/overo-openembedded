@@ -20,6 +20,7 @@ SRC_URI += "file://uClibc.machine file://uClibc.distro \
 	    file://pthread_atfork.patch;patch=1 \
 	    file://uclibc_ldso_use_O0.patch;patch=1 \
 	    file://ldso_use_arm_dl_linux_resolve_in_thumb_mode.patch;patch=1 \
+            file://unifdef-fix.patch;patch=1 \
 	   "
 #recent versions uclibc require real kernel headers
 PACKAGE_ARCH = "${MACHINE_ARCH}"
@@ -27,7 +28,5 @@ PACKAGE_ARCH = "${MACHINE_ARCH}"
 #as stated above, uclibc needs real kernel-headers
 #however: we can't depend on virtual/kernel when nptl hits due to depends deadlocking ....
 KERNEL_SOURCE = "${STAGING_DIR_HOST}/${exec_prefix}"
-
-SRC_URI += "http://www.uclibc.org/downloads/uClibc-${PV}.tar.bz2"
 
 S = "${WORKDIR}/uClibc-${UCLIBC_BASE}"

@@ -1,9 +1,9 @@
 DESCRIPTION = "WebKit browser engine, GTK+ edition"
-DEPENDS = "gtk-doc-native gtk-doc gnome-keyring libsoup-2.4 curl icu libxml2 cairo libxslt libxt libidn gnutls gtk+ gstreamer gst-plugins-base gnome-vfs bison-native flex-native gperf-native perl-native sqlite3"
+DEPENDS = "enchant gtk-doc-native gtk-doc gnome-keyring libsoup-2.4 curl icu libxml2 cairo libxslt libxt libidn gnutls gtk+ gstreamer gst-plugins-base gnome-vfs bison-native flex-native gperf-native perl-native sqlite3"
 
 SRCREV_FORMAT = "webcore-rwebkit"
 
-PV = "1.1.4+svnr${SRCREV}"
+PV = "1.1.11+svnr${SRCREV}"
 
 SRC_URI = "\
   svn://svn.webkit.org/repository/webkit/trunk/;module=JavaScriptCore;proto=http \
@@ -17,8 +17,8 @@ SRC_URI = "\
   file://Makefile.shared \
   file://autogen.sh \
   file://configure.ac \
-  file://symbols.filter \
   file://GNUmakefile.am \
+  file://gtk-doc.make \
  "
 
 S = "${WORKDIR}/"
@@ -32,13 +32,11 @@ EXTRA_OECONF = "\
                 --enable-svg \
                 --enable-icon-database=yes \
                 --with-http-backend=soup \
-               "
+#                --with-unicode-backend=glib \
+                --with-libsoup-gnome=yes \
+"
 
 EXTRA_AUTORECONF = " -I autotools "
-
-do_configure_prepend() {
-	touch gtk-doc.make
-}
 
 # Dolt gets used on x86 and ppc and hardcodes 'libtool'
 do_configure_append() {
@@ -57,7 +55,7 @@ do_compile_prepend() {
             ${BUILD_CXX} dftables.cpp -o dftables -I. -I../wtf
         fi
         cp dftables ${S}/WebKitBuilds/Debug/JavaScriptCore/pcre/tmp/
-        cp dftables ${S}/Programs/        
+        cp dftables ${S}/Programs/
 	cd ${S}
 }
 
@@ -70,5 +68,5 @@ FILES_${PN}launcher = "${bindir}/GtkLauncher"
 FILES_${PN}launcher-dbg = "${bindir}/.debug/GtkLauncher"
 FILES_libjavascriptcore = "${libdir}/libJavaScriptCore.so.*"
 FILES_${PN}-webinspector = "${datadir}/webkit-1.0/webinspector/"
-
+FILES_${PN} += "${datadir}/webkit-1.0/resources/error.html ${datadir}/webkit-1.0/images"
 

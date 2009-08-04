@@ -102,7 +102,7 @@ PREFERRED_PROVIDERS += " virtual/${TARGET_PREFIX}g++:gcc-cross"
 # generated to the list provided by GLIBC_GENERATE_LOCALES. This is huge
 # time-savior for developmental builds. Format: list of locale.encoding pairs
 # with spaces as separators.
-# GLIBC_GENERATE_LOCALES = "en_GB.UTF-8 de_DE.UTF-8"
+# GLIBC_GENERATE_LOCALES = "en_US.UTF-8 en_GB.UTF-8 de_DE.UTF-8"
 
 # Uncomment this to select a particular major kernel version if the MACHINE setting
 # supports more than one major kernel version. Currently this is suported by the
@@ -118,6 +118,11 @@ PREFERRED_PROVIDERS += " virtual/${TARGET_PREFIX}g++:gcc-cross"
 # jffs2, tar(.gz|bz2), cpio(.gz), cramfs, ext2(.gz), ext3(.gz)
 # squashfs, squashfs-lzma
 IMAGE_FSTYPES = "jffs2 tar"
+
+# Uncomment this if you want to keep the temporary rootfs
+# diretory, this can be useful during development.
+# (Note that this rootfs is NOT usuable as NFS export.)
+# IMAGE_KEEPROOTFS = "1"
 
 # Uncomment this to disable the parse cache (not recommended).
 # CACHE = ""
@@ -146,6 +151,12 @@ IMAGE_FSTYPES = "jffs2 tar"
 # processors. Useful on SMP machines. This may break some packages - we're
 # in the process of marking these so let us know if you find any.
 # PARALLEL_MAKE = "-j 4"
+
+# Uncomment to run multiple bitbake threads in parallel.
+# Bitbake can do multiple jobs in parallel: Its a good idea make use of 
+# all available resources: e.g. to download sources while some other
+# piece of software is compiled.
+# BB_NUMBER_THREADS = "2"
 
 # Uncomment this if you want BitBake to emit the log if a build fails.
 BBINCLUDELOGS = "yes"

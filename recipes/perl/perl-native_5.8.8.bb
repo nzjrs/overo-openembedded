@@ -3,7 +3,7 @@ HOMEPAGE = "http://www.perl.org/"
 SECTION = "libs"
 LICENSE = "Artistic|GPL"
 DEPENDS = "virtual/db-native gdbm-native"
-PR = "r13"
+PR = "r14"
 
 FILESDIR = "${@os.path.dirname(bb.data.getVar('FILE',d,1))}/perl-${PV}"
 
@@ -43,6 +43,7 @@ do_configure () {
         -Dusethreads \
         -Duseithreads \
         -Duselargefiles \
+	-Dnoextensions=ODBM_File \
         -Ud_dosuid \
         -Ui_db \
         -Ui_ndbm \
@@ -83,6 +84,12 @@ do_stage_append() {
                  dosish.h form.h iperlsys.h opcode.h perl.h perly.h regcomp.h \
                  thread.h warnings.h; do
             install $i ${STAGING_LIBDIR_NATIVE}/perl/${PV}/CORE
+        done
+}
+do_stage_append_nylon() {
+        # get rid of definitions not supported by the gcc version we use for nylon...
+        for i in ${STAGING_LIBDIR_NATIVE}/perl/${PV}/Config_heavy.pl ${STAGING_DIR_HOST}/perl/config.sh; do
+                perl -pi -e 's/-Wdeclaration-after-statement //g' ${i}
         done
 }
 

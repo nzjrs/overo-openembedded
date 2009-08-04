@@ -2,7 +2,14 @@ AC_PREREQ(2.59)
 
 m4_define([webkit_major_version], [1])
 m4_define([webkit_minor_version], [1])
-m4_define([webkit_micro_version], [4])
+m4_define([webkit_micro_version], [11])
+
+# This is the version we'll be using as part of our User-Agent string
+# e.g., AppleWebKit/$(webkit_user_agent_version) ...
+#
+# Sourced from WebCore/Configurations/Version.xcconfig
+m4_define([webkit_user_agent_major_version], [531])
+m4_define([webkit_user_agent_minor_version], [2])
 
 AC_INIT([WebKit],[webkit_major_version.webkit_minor_version.webkit_micro_version],[http://bugs.webkit.org/])
 
@@ -11,20 +18,24 @@ AC_CONFIG_AUX_DIR([autotools])
 AC_SUBST(ACLOCAL_AMFLAGS, "-I autotools")
 
 AC_CONFIG_HEADERS([autotoolsconfig.h])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_HOST
 
 WEBKIT_MAJOR_VERSION=webkit_major_version
 WEBKIT_MINOR_VERSION=webkit_minor_version
 WEBKIT_MICRO_VERSION=webkit_micro_version
+WEBKIT_USER_AGENT_MAJOR_VERSION=webkit_user_agent_major_version
+WEBKIT_USER_AGENT_MINOR_VERSION=webkit_user_agent_minor_version
 AC_SUBST(WEBKIT_MAJOR_VERSION)
 AC_SUBST(WEBKIT_MINOR_VERSION)
 AC_SUBST(WEBKIT_MICRO_VERSION)
+AC_SUBST(WEBKIT_USER_AGENT_MAJOR_VERSION)
+AC_SUBST(WEBKIT_USER_AGENT_MINOR_VERSION)
 
 AC_CONFIG_SRCDIR([WebCore/config.h])
 
 dnl # Libtool library version, not to confuse with API version
 dnl # see http://www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html#Libtool-versioning
-LIBWEBKITGTK_VERSION=4:0:2
+LIBWEBKITGTK_VERSION=10:0:8
 AC_SUBST([LIBWEBKITGTK_VERSION])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects tar-ustar])
@@ -176,6 +187,7 @@ if test "$with_hildon" = "yes"; then
 fi
 
 # minimum base dependencies
+LIBSOUP_REQUIRED_VERSION=2.27.4
 CAIRO_REQUIRED_VERSION=1.2
 FONTCONFIG_REQUIRED_VERSION=2.4
 FREETYPE2_REQUIRED_VERSION=9.0
@@ -183,14 +195,15 @@ LIBXML_REQUIRED_VERSION=2.6
 
 # minimum GTK+ base dependencies
 PANGO_REQUIRED_VERSION=1.0
-GTK_REQUIRED_VERSION=2.8
+GTK_REQUIRED_VERSION=2.10
 
 # optional modules
-LIBSOUP_REQUIRED_VERSION=2.25.91
 LIBXSLT_REQUIRED_VERSION=1.1.7
 SQLITE_REQUIRED_VERSION=3.0
 GSTREAMER_REQUIRED_VERSION=0.10
 GNOME_KEYRING_REQUIRED_VERSION=2.26.0
+ENCHANT_REQUIRED_VERSION=0.22
+GAIL_REQUIRED_VERSION=1.8
 
 # Available modules
 #
@@ -199,7 +212,12 @@ GNOME_KEYRING_REQUIRED_VERSION=2.26.0
 #
 # todo: webcore gtk
 WEBKIT_CHECK_DEPENDENCIES([glib unicode])
-                          
+
+GETTEXT_PACKAGE=$PACKAGE
+AC_SUBST(GETTEXT_PACKAGE)
+AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE,"$GETTEXT_PACKAGE",
+                   [The gettext catalog name])
+
 PKG_CHECK_MODULES(LIBXML, libxml-2.0 >= $LIBXML_REQUIRED_VERSION)
 AC_SUBST(LIBXML_CFLAGS)
 AC_SUBST(LIBXML_LIBS)
@@ -209,6 +227,14 @@ PKG_CHECK_MODULES(PANGO,
                    pangoft2])
 AC_SUBST(PANGO_CFLAGS)
 AC_SUBST(PANGO_LIBS)
+
+PKG_CHECK_MODULES(ENCHANT, enchant >= $ENCHANT_REQUIRED_VERSION)
+AC_SUBST(ENCHANT_CFLAGS)
+AC_SUBST(ENCHANT_LIBS)
+
+PKG_CHECK_MODULES(GAIL, gail >= $GAIL_REQUIRED_VERSION)
+AC_SUBST(GAIL_CFLAGS)
+AC_SUBST(GAIL_LIBS)
 
 # check for target-specific dependencies
 if test "$with_target" = "directfb"; then
@@ -283,9 +309,17 @@ AC_MSG_RESULT([$enable_3D_transforms])
 AC_MSG_CHECKING([whether to enable HTML5 Channel Messaging support])
 AC_ARG_ENABLE(channel_messaging,
               AC_HELP_STRING([--enable-channel-messaging],
-                             [enable HTML5 channel messaging support [default=no]]),
-              [],[enable_channel_messaging="no"])
+                             [enable HTML5 channel messaging support [default=yes]]),
+              [],[enable_channel_messaging="yes"])
 AC_MSG_RESULT([$enable_channel_messaging])
+
+# check whether to enable JavaScript debugger/profiler support
+AC_MSG_CHECKING([whether to enable JavaScript debugger/profiler support])
+AC_ARG_ENABLE(javascript_debugger,
+              AC_HELP_STRING([--enable-javascript-debugger],
+                             [enable JavaScript debugger/profiler support [default=yes]]),
+              [],[enable_javascript_debugger="yes"])
+AC_MSG_RESULT([$enable_javascript_debugger])
 
 # check whether to enable HTML5 Offline Web Applications support
 AC_MSG_CHECKING([whether to enable HTML5 offline web applications support])
@@ -375,22 +409,29 @@ AC_ARG_ENABLE(wml,
               [],[enable_wml="no"])
 AC_MSG_RESULT([$enable_wml])
 
+# check whether to enable SharedWorkers support
+AC_MSG_CHECKING([whether to enable SharedWorkers support])
+AC_ARG_ENABLE(shared_workers,
+              AC_HELP_STRING([--enable-shared-workers],
+                             [enable support for SharedWorkers [default=no]]),
+              [],[enable_shared_workers="no"])
+AC_MSG_RESULT([$enable_shared_workers])
+
 # check whether to enable Web Workers support
 AC_MSG_CHECKING([whether to enable Web Workers support])
-AC_ARG_ENABLE(web_workers,
-              AC_HELP_STRING([--enable-web-workers],
+AC_ARG_ENABLE(workers,
+              AC_HELP_STRING([--enable-workers],
                              [enable support for Web Workers [default=yes]]),
-              [],[enable_web_workers="yes"])
-AC_MSG_RESULT([$enable_web_workers])
+              [],[enable_workers="yes"])
+AC_MSG_RESULT([$enable_workers])
 
 # turn off svg features if --disable-svg is requested
 if test "$enable_svg" = "no"; then
    enable_svg_animation=no
-   enable_svg_filters=no
    enable_svg_fonts=no
    enable_svg_foreign_object=no
    enable_svg_as_image=no
-   enable_svg_use_element=no
+   enable_svg_use=no
 fi
 
 # check whether to enable support for SVG animation
@@ -401,13 +442,13 @@ AC_ARG_ENABLE(svg_animation,
               [],[enable_svg_animation="yes"])
 AC_MSG_RESULT([$enable_svg_animation])
 
-# check whether to enable support for SVG filters
-AC_MSG_CHECKING([whether to enable support for SVG filters])
-AC_ARG_ENABLE(svg_filters,
-              AC_HELP_STRING([--enable-svg-filters],
-                             [enable support for SVG filters (experimental) [default=no]]),
-              [],[enable_svg_filters="no"])
-AC_MSG_RESULT([$enable_svg_filters])
+# check whether to enable support for filters
+AC_MSG_CHECKING([whether to enable support for filters])
+AC_ARG_ENABLE(filters,
+              AC_HELP_STRING([--enable-filters],
+                             [enable support for filters (experimental) [default=no]]),
+              [],[enable_filters="no"])
+AC_MSG_RESULT([$enable_filters])
 
 # check whether to enable support for SVG fonts
 AC_MSG_CHECKING([whether to enable support for SVG fonts])
@@ -435,19 +476,18 @@ AC_MSG_RESULT([$enable_svg_as_image])
 
 # check whether to enable SVG USE element support
 AC_MSG_CHECKING([whether to enable support for SVG use element])
-AC_ARG_ENABLE(svg_use_element,
-              AC_HELP_STRING([--enable-svg-use-element],
+AC_ARG_ENABLE(svg_use,
+              AC_HELP_STRING([--enable-svg-use],
                              [enable SVG use element support (experimental) [default=yes]]),
-              [],[enable_svg_use_element="yes"])
-AC_MSG_RESULT([$enable_svg_use_element])
+              [],[enable_svg_use="yes"])
+AC_MSG_RESULT([$enable_svg_use])
 
 # check for SVG features, enabling SVG if necessary
 if test "$enable_svg_animation" = "yes" || \
-   test "$enable_svg_filters" = "yes" || \
    test "$enable_svg_fonts" = "yes" || \
    test "$enable_svg_foreign_object" = "yes" || \
    test "$enable_svg_as_image" = "yes" || \
-   test "$enable_svg_use_element" = "yes"; then
+   test "$enable_svg_use" = "yes"; then
    svg_flags=yes
    if test "$enable_svg" = "no"; then
        AC_MSG_WARN([SVG feature(s) requested but SVG is disabled.. Enabling SVG support])
@@ -477,17 +517,26 @@ AC_ARG_ENABLE([jit],
                              [Enable JIT compilation default=yes]),
               [],[enable_jit="yes"])
 if test "$enable_jit" = "yes"; then
-    case "$target_cpu" in
-        i*86)
+    case "$host_cpu" in
+        i*86|x86_64)
             AC_DEFINE([ENABLE_JIT], [1], [Define to enable JIT])
-            AC_DEFINE([ENABLE_WREC], [1], [Define to enable WREC])
+            AC_DEFINE([ENABLE_YARR], [1], [Define to enable YARR])
+            AC_DEFINE([ENABLE_YARR_JIT], [1], [Define to enable YARR JIT])
             AC_DEFINE([ENABLE_JIT_OPTIMIZE_CALL], [1], [Define to enable optimizing calls])
             AC_DEFINE([ENABLE_JIT_OPTIMIZE_PROPERTY_ACCESS], [1], [Define to enable optimized property access])
             AC_DEFINE([ENABLE_JIT_OPTIMIZE_ARITHMETIC], [1], [Define to enable optimized arithmetic])
-            AC_DEFINE([WTF_USE_JIT_STUB_ARGUMENT_VA_LIST], [1], [Use stub va_list])
+            case "$host_cpu" in
+                i*86)
+                    AC_DEFINE([WTF_USE_JIT_STUB_ARGUMENT_VA_LIST], [1], [Use stub va_list])
+                ;;
+                x86_64)
+                    AC_DEFINE([WTF_USE_JIT_STUB_ARGUMENT_REGISTER], [1], [Use stub register])
+                    AC_DEFINE([WTF_USE_ALTERNATE_JSIMMEDIATE], [1], [Use alternate JSImmediate])
+                ;;
+            esac
         ;;
         *)
-            enable_jit="no (CPU '$target_cpu' not supported)"
+            enable_jit="no (CPU '$host_cpu' not supported)"
         ;;
     esac
 fi
@@ -580,7 +629,8 @@ if test "$enable_video" = "yes"; then
    PKG_CHECK_MODULES([GSTREAMER],
                      [gstreamer-0.10 >= $GSTREAMER_REQUIRED_VERSION
                      gstreamer-base-0.10,
-                     gstreamer-plugins-base-0.10])
+                     gstreamer-plugins-base-0.10,
+                     gstreamer-video-0.10])
    AC_SUBST([GSTREAMER_CFLAGS])
    AC_SUBST([GSTREAMER_LIBS])
 fi
@@ -613,6 +663,10 @@ AM_CONDITIONAL([TARGET_WIN32], [test "$with_target" = "win32"])
 AM_CONDITIONAL([TARGET_QUARTZ], [test "$with_target" = "quartz"])
 AM_CONDITIONAL([TARGET_DIRECTFB], [test "$with_target" = "directfb"])
 
+# Unicode backend conditionals
+AM_CONDITIONAL([USE_ICU_UNICODE], [test "$with_unicode_backend" = "icu"])
+AM_CONDITIONAL([USE_GLIB_UNICODE], [test "$with_unicode_backend" = "glib"])
+
 # Auth backend conditionals
 AM_CONDITIONAL([USE_GNOMEKEYRING], [test "$enable_gnomekeyring" = "yes"])
 
@@ -625,25 +679,27 @@ AM_CONDITIONAL([ENABLE_DEBUG],[test "$enable_debug" = "yes"])
 AM_CONDITIONAL([ENABLE_DASHBOARD_SUPPORT],[test "$enable_dashboard_support" = "yes"])
 AM_CONDITIONAL([ENABLE_3D_TRANSFORMS],[test "$enable_3D_transforms" = "yes"])
 AM_CONDITIONAL([ENABLE_CHANNEL_MESSAGING],[test "$enable_channel_messaging" = "yes"])
+AM_CONDITIONAL([ENABLE_JAVASCRIPT_DEBUGGER],[test "$enable_javascript_debugger" = "yes"])
 AM_CONDITIONAL([ENABLE_OFFLINE_WEB_APPLICATIONS],[test "$enable_offline_web_applications" = "yes"])
 AM_CONDITIONAL([ENABLE_DOM_STORAGE],[test "$enable_dom_storage" = "yes"])
 AM_CONDITIONAL([ENABLE_DATABASE],[test "$enable_database" = "yes"])
 AM_CONDITIONAL([ENABLE_ICONDATABASE],[test "$enable_icon_database" = "yes"])
 AM_CONDITIONAL([ENABLE_XPATH],[test "$enable_xpath" = "yes"])
 AM_CONDITIONAL([ENABLE_XSLT],[test "$enable_xslt" = "yes"])
+AM_CONDITIONAL([ENABLE_FILTERS],[test "$enable_filters" = "yes"])
 AM_CONDITIONAL([ENABLE_GEOLOCATION], [test "$enable_geolocation" = "yes"])
 AM_CONDITIONAL([ENABLE_VIDEO],[test "$enable_video" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG],[test "$enable_svg" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG_ANIMATION],[test "$enable_svg_animation" = "yes"])
-AM_CONDITIONAL([ENABLE_SVG_FILTERS],[test "$enable_svg_filters" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG_FONTS],[test "$enable_svg_fonts" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG_FOREIGN_OBJECT],[test "$enable_svg_foreign_object" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG_AS_IMAGE],[test "$enable_svg_as_image" = "yes"])
-AM_CONDITIONAL([ENABLE_SVG_USE],[test "$enable_svg_use_element" = "yes"])
+AM_CONDITIONAL([ENABLE_SVG_USE],[test "$enable_svg_use" = "yes"])
 AM_CONDITIONAL([ENABLE_COVERAGE],[test "$enable_coverage" = "yes"])
 AM_CONDITIONAL([ENABLE_FAST_MALLOC],[test "$enable_fast_malloc" = "yes"])
 AM_CONDITIONAL([ENABLE_WML],[test "$enable_wml" = "yes"])
-AM_CONDITIONAL([ENABLE_WORKERS],[test "$enable_web_workers" = "yes"])
+AM_CONDITIONAL([ENABLE_WORKERS],[test "$enable_workers" = "yes"])
+AM_CONDITIONAL([ENABLE_SHARED_WORKERS],[test "$enable_shared_workers" = "yes"])
 AM_CONDITIONAL([SVG_FLAGS],[test "$svg_flags" = "yes"])
 AM_CONDITIONAL([HTML_FLAGS],[test "$html_flags" = "yes"])
 
@@ -651,6 +707,7 @@ AC_CONFIG_FILES([
 GNUmakefile
 WebKit/gtk/webkit-1.0.pc:WebKit/gtk/webkit.pc.in
 WebKit/gtk/webkit/webkitversion.h
+WebKit/gtk/docs/GNUmakefile
 WebKit/gtk/docs/version.xml
 ]
 )
@@ -664,33 +721,40 @@ Build configuration:
  Enable debugging (slow)                                  : $enable_debug
  Enable GCC build optimization                            : $enable_optimizations
  Code coverage support                                    : $enable_coverage
- Unicode backend                                          : $unicode_backend
+ Unicode backend                                          : $with_unicode_backend
  Font backend                                             : $with_font_backend
  Optimized memory allocator                               : $enable_fast_malloc
 Features:
  3D Transforms                                            : $enable_3D_transforms
  JIT compilation                                          : $enable_jit
  Dashboard support                                        : $enable_dashboard_support
+ Filters support                                          : $enable_filters
  Geolocation support                                      : $enable_geolocation
  GNOME Keyring support                                    : $enable_gnomekeyring
+ JavaScript debugger/profiler support                     : $enable_javascript_debugger
  HTML5 offline web applications support                   : $enable_offline_web_applications
  HTML5 channel messaging support                          : $enable_channel_messaging
  HTML5 client-side session and persistent storage support : $enable_dom_storage
  HTML5 client-side database storage support               : $enable_database
  HTML5 video element support                              : $enable_video
  Icon database support                                    : $enable_icon_database
+ SharedWorkers support                                    : $enable_shared_workers
  SVG support                                              : $enable_svg
  SVG animation support                                    : $enable_svg_animation
- SVG filters support                                      : $enable_svg_filters
  SVG fonts support                                        : $enable_svg_fonts
  SVG foreign object support                               : $enable_svg_foreign_object
  SVG as image support                                     : $enable_svg_as_image
- SVG use element support                                  : $enable_svg_use_element
+ SVG use element support                                  : $enable_svg_use
  WML support                                              : $enable_wml
- Web Workers support                                      : $enable_web_workers
+ Web Workers support                                      : $enable_workers
  XPATH support                                            : $enable_xpath
  XSLT support                                             : $enable_xslt
 GTK+ configuration:
  GDK target                                               : $with_target
  Hildon UI extensions                                     : $with_hildon
 "
+if test "$with_unicode_backend" = "glib"; then
+   echo "     >> WARNING: the glib-based unicode backend is slow and incomplete <<"
+   echo
+   echo
+fi

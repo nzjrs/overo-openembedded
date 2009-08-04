@@ -35,15 +35,18 @@ PACKAGES =+ "ldd uclibc-utils-dbg uclibc-utils uclibc-gconv uclibc-thread-db"
 LEAD_SONAME = "libc.so"
 
 # The last line (gdb and lib1) is for uclinux-uclibc builds 
-uclibc_baselibs = "/lib/libcrypt*.so* /lib/libdl*.so \
-		   /lib/libintl*.so* /lib/libm*.so \
-		   /lib/libnsl*.so* /lib/libpthread*.so \
-		   /lib/libresolv*.so* /lib/libutil*.so \
-		   /lib/libuClibc*.so* /lib/ld*.so* \
-		   /lib/libc*.so* /lib/libdl*.so* \
-		   /lib/libm*.so* /lib/libutil*.so* \
-		   /lib/libpthread*.so* /lib/librt*.so* \
-                   /usr/lib/libc.gdb /usr/lib/libc /lib/lib1.so \
+uclibc_baselibs = "${base_libdir}/libcrypt*.so.* ${base_libdir}/libcrypt-*.so \
+		   ${base_libdir}/libintl*.so.* ${base_libdir}/libintl-*.so \
+		   ${base_libdir}/libnsl*.so.* ${base_libdir}/libnsl-*.so \
+		   ${base_libdir}/libresolv*.so.* ${base_libdir}/libresolv-*.so \
+                   ${base_libdir}/ld*.so.* ${base_libdir}/ld-*.so \
+		   ${base_libdir}/libc*.so.* ${base_libdir}/libuClibc-*.so \
+                   ${base_libdir}/libdl*.so.* ${base_libdir}/libdl-*.so \
+		   ${base_libdir}/libm*.so.* ${base_libdir}/libm-*.so \
+                   ${base_libdir}/libutil*.so.* ${base_libdir}/libutil-*.so \
+		   ${base_libdir}/libpthread*.so.* ${base_libdir}/libpthread-*.so \
+                   ${base_libdir}/librt*.so.* ${base_libdir}/librt-*.so \
+                   ${libdir}/libc.gdb ${libdir}/libc ${base_libdir}/lib1.so \
                    "
 FILES_${PN} = "${sysconfdir} ${uclibc_baselibs} /sbin/ldconfig \
 	       ${libexecdir} ${datadir}/zoneinfo ${libdir}/locale"
@@ -66,8 +69,9 @@ UCLIBC_LOCALE_URI = "http://www.uclibc.org/downloads/${UCLIBC_LOCALE_FILE}"
 UCLIBC_LOCALE_URI_arm = "http://wiki.openembedded.net/dl/uclibc-locale/${UCLIBC_LOCALE_FILE}"
 
 SRC_URI = "${@['${UCLIBC_LOCALE_URI}', ''][bb.data.getVar('USE_NLS', d, 1) != 'yes']} \
-	   file://uClibc.config"
-
+	   file://uClibc.config \
+           http://www.uclibc.org/downloads/uClibc-${PV}.tar.bz2 \
+          "
 UCLIBC_STAGE_PREFIX = "${STAGING_DIR_HOST}${layout_prefix}"
 
 # do_stage barfs on a CC with whitepspace, therefore put the 'HOST_CC_ARCH' in
@@ -76,7 +80,6 @@ OEMAKE_NO_CC = "'STRIPTOOL=true' 'LD=${LD}' \
 		'LOCALE_DATA_FILENAME=${UCLIBC_LOCALE_FILE}'"
 EXTRA_OEMAKE = "${OEMAKE_NO_CC} 'CC=${CC}' \
 		'HOSTCFLAGS=-I${STAGING_INCDIR_NATIVE}'"
-EXTRA_OEMAKE_task_do_populate_staging = "${OEMAKE_NO_CC}"
 EXTRA_OEMAKE_task_do_package = "${OEMAKE_NO_CC}"
 
 KERNEL_SOURCE = "${STAGING_INCDIR}"
@@ -95,7 +98,7 @@ configmangle = 's,^KERNEL_SOURCE=.*,KERNEL_SOURCE="${KERNEL_SOURCE}",g; \
 		s,^SHARED_LIB_LOADER_PREFIX=.*,SHARED_LIB_LOADER_PREFIX="/lib",; \
 		s,.*UCLIBC_HAS_WCHAR.*,UCLIBC_HAS_WCHAR=y,g; \
 		${@["","s,.*UCLIBC_HAS_LOCALE.*,UCLIBC_HAS_LOCALE=y,;"][bb.data.getVar("USE_NLS", d, 1) == "yes"]} \
-		${@["","s,.*LDSO_GNU_HASH_SUPPORT.*,# LDSO_GNU_HASH_SUPPORT is not set,;"][bb.data.getVar("TARGET_ARCH", d, 1) == "avr32"]} \
+		${@["","s,.*LDSO_GNU_HASH_SUPPORT.*,# LDSO_GNU_HASH_SUPPORT is not set,;"][bb.data.getVar("TARGET_ARCH", d, 1) in ['mips', 'mipsel', 'avr32']]} \
                '
 
 CFLAGS := "${@oe_filter_out('-I\S+', '${CFLAGS}', d)}"
@@ -202,17 +205,17 @@ do_install() {
 		rmdir ${D}${prefix}/lib
 	fi
 
-	if [ "${bindir}" != "/usr/bin" ]; then
-		install -d ${D}${bindir}
-		mv ${D}/usr/bin/* ${D}${bindir}/
-		rmdir ${D}/usr/bin
-	fi
-
         oe_runmake "SSP_ALL_CFLAGS=${TARGET_LINK_HASH_STYLE}" utils
         oe_runmake STRIPTOOL=true PREFIX=${D} DEVEL_PREFIX=${prefix}/ RUNTIME_PREFIX=/ \
                 install_utils
 	
 	# oe_runstrip needs +x on files	
 	chmod +x ${D}/${base_libdir}/*
+
+	if [ "${bindir}" != "/usr/bin" ]; then
+		install -d ${D}${bindir}
+		mv ${D}/usr/bin/* ${D}${bindir}/
+		rmdir ${D}/usr/bin
+	fi
 }
 

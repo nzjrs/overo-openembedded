@@ -5,12 +5,14 @@ ARM_INSTRUCTION_SET = "arm"
 PACKAGES_DYNAMIC = "libc6*"
 RPROVIDES_${PN}-dev = "libc6-dev virtual-libc-dev"
 
+PR = "${INC_PR}.0"
+
 # the -isystem in bitbake.conf screws up glibc do_stage
 BUILD_CPPFLAGS = "-I${STAGING_INCDIR_NATIVE}"
 TARGET_CPPFLAGS = "-I${STAGING_DIR_TARGET}${layout_includedir}"
 
 
-FILESPATH = "${@base_set_filespath([ '${FILE_DIRNAME}/glibc-2.4', '${FILE_DIRNAME}/glibc-${PV}', '${FILE_DIRNAME}/files', '${FILE_DIRNAME}' ], d)}"
+FILESPATHPKG =. "glibc-2.4:"
 
 GLIBC_ADDONS ?= "ports,nptl,libidn"
 
@@ -52,12 +54,17 @@ SRC_URI = "ftp://ftp.gnu.org/pub/gnu/glibc/glibc-${PV}.tar.bz2 \
 	   file://glibc-check_pf.patch;patch=1;pnum=0 \
            file://ldd-unbash.patch;patch=1 \
 	   file://glibc-arm-IO-acquire-lock-fix.diff;patch=1 \
+	   file://local-args6.diff;patch=1 \
+	   file://arm-check-pf.patch;patch=1 \
+	   file://arm-lowlevellock-include-tls.patch;patch=1 \
 	   file://generic-bits_select.h \
 	   file://generic-bits_types.h \
 	   file://generic-bits_typesizes.h \
 	   file://generic-bits_time.h \
            file://etc/ld.so.conf \
            file://generate-supported.mk \
+           file://march-i686.patch;patch=1;pnum=0 \
+	   file://tls_i486.patch;patch=1 \
            "
 
 
@@ -66,8 +73,7 @@ SRC_URI_append_sh3 = " file://no-z-defs.patch;patch=1"
 SRC_URI_append_sh4 = " file://no-z-defs.patch;patch=1"
 
 #powerpc patches to add support for soft-float
-SRC_URI_append_powerpc= " \
-                          file://powerpc-sqrt-hack.diff;patch=1""
+SRC_URI_append_powerpc= " file://powerpc-sqrt-hack.diff;patch=1"
 
 S = "${WORKDIR}/glibc-${PV}"
 B = "${WORKDIR}/build-${TARGET_SYS}"

@@ -1,7 +1,7 @@
 DESCRIPTION = "Linux Bluetooth Stack Userland Utilities."
 SECTION = "console"
 PRIORITY = "optional"
-DEPENDS = "gstreamer gst-plugins-base bluez-libs-${PV} libusb-compat dbus glib-2.0"
+DEPENDS = "gstreamer gst-plugins-base bluez-libs-${PV} virtual/libusb0 dbus glib-2.0"
 PROVIDES = "bluez-utils-dbus"
 RPROVIDES_${PN} = "bluez-pan bluez-sdp bluez-utils-dbus"
 RREPLACES = "bluez-utils-dbus"
@@ -10,10 +10,10 @@ LICENSE = "GPL"
 
 FILESPATH = "${FILE_DIRNAME}/bluez-utils-${PV}:${FILE_DIRNAME}/bluez-utils"
 
-# ti patch should be sent it upstream!
 SRC_URI = "http://bluez.sourceforge.net/download/bluez-utils-${PV}.tar.gz \
            file://hcid.conf \
-           file://hciattach-ti-bts.patch;patch=1 \
+           file://bluetooth.default \
+           file://bluetooth.init \
            file://sbc-thumb.patch;patch=1"
 
 S = "${WORKDIR}/bluez-utils-${PV}"

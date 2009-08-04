@@ -4,10 +4,15 @@ LICENSE = "GPL"
 
 inherit kernel
 
+BOOT_SPLASH ?= "logo_linux_clut224.ppm"
+
 RPSRC = "http://www.rpsys.net/openzaurus/patches/archive"
 
 # Enable OABI compat for people stuck with obsolete userspace
 ARM_KEEP_OABI ?= "1"
+
+# Quirk for udev greater or equal 141
+UDEV_GE_141 ?= "0"
 
 # Specify the commandline for your device
 
@@ -18,7 +23,7 @@ CMDLINE_at91sam9263ek = "mem=64M console=ttyS0,115200 root=/dev/mmcblk0p1 rootfs
 
 # Set the verbosity of kernel messages during runtime
 # You can define CMDLINE_DEBUG in your local.conf or distro.conf to override this behaviour  
-CMDLINE_DEBUG ?= '${@base_conditional("DISTRO_TYPE", "release", "quiet", "debug",d)}'
+CMDLINE_DEBUG ?= '${@base_conditional("DISTRO_TYPE", "release", "quiet", "debug", d)}'
 CMDLINE_append = " ${CMDLINE_DEBUG} "
 
 # Support for binary device tree generation
@@ -26,6 +31,7 @@ CMDLINE_append = " ${CMDLINE_DEBUG} "
 FILES_kernel-devicetree = "/boot/devicetree*"
 
 KERNEL_DEVICETREE_boc01 = "${WORKDIR}/boc01.dts"
+KERNEL_DEVICETREE_calamari = "arch/${ARCH}/boot/dts/mpc8536ds.dts"
 KERNEL_DEVICETREE_canyonlands = "arch/${ARCH}/boot/dts/canyonlands.dts"
 KERNEL_DEVICETREE_kilauea = "arch/${ARCH}/boot/dts/kilauea.dts"
 KERNEL_DEVICETREE_lsppchd = "arch/${ARCH}/boot/dts/kuroboxHD.dts"
@@ -53,10 +59,10 @@ do_configure_prepend() {
         echo "" > ${S}/.config
 
         #
-        # logo support, if you supply logo_linux_clut224.ppm in SRC_URI, then it's going to be used
+        # logo support, if you supply BOOT_SPLASH in SRC_URI, then it's going to be used
         #
-        if [ -e ${WORKDIR}/logo_linux_clut224.ppm ]; then
-                install -m 0644 ${WORKDIR}/logo_linux_clut224.ppm drivers/video/logo/logo_linux_clut224.ppm
+        if [ -e ${WORKDIR}/${BOOT_SPLASH} ]; then
+                install -m 0644 ${WORKDIR}/${BOOT_SPLASH} drivers/video/logo/logo_linux_clut224.ppm
                 echo "CONFIG_LOGO=y"                    >> ${S}/.config
                 echo "CONFIG_LOGO_LINUX_CLUT224=y"      >> ${S}/.config
         fi
@@ -103,6 +109,20 @@ do_configure_prepend() {
 
         echo 'CONFIG_LOCALVERSION=""' >>${S}/.config
         echo '# CONFIG_LOCALVERSION_AUTO is not set' >>${S}/.config
+
+        #
+        # Udev quirks
+        #
+
+        # Newer versions of udev mandate that sysfs doesn't have deprecated entries
+        if [ "${UDEV_GE_141}" = "1" ] ; then
+            sed -e /CONFIG_SYSFS_DEPRECATED/d \
+                -e /CONFIG_SYSFS_DEPRECATED_V2/d \
+                -i '${S}/.config'
+            echo '# CONFIG_SYSFS_DEPRECATED is not set' >> ${S}/.config
+            echo '# CONFIG_SYSFS_DEPRECATED_V2 is not set' >> ${S}/.config
+        fi
+
         #
         # root-over-nfs-over-usb-eth support. Limited, but should cover some cases.
         # Enable this by setting a proper CMDLINE_NFSROOT_USB.

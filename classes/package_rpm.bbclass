@@ -129,14 +129,12 @@ python write_specfile() {
 
 	# call out rpm -bb on the .spec, thereby creating an rpm
 
-	bb.note(bb.data.expand("${RPMBUILD} -bb ${OUTSPECFILE}", d))
-
 	bb.data.setVar('BUILDSPEC', "${RPMBUILD} -bb ${OUTSPECFILE}\n", d)
 	bb.data.setVarFlag('BUILDSPEC', 'func', '1', d)
 	bb.build.exec_func('BUILDSPEC', d)
 
 	# move the rpm into the pkgoutdir
-	rpm = bb.data.expand('${RPMBUILDPATH}/RPMS/${TARGET_ARCH}/${PKG}-${RPMPV}-${PR}.${TARGET_ARCH}.rpm', d)
+	rpm = bb.data.expand('${RPMBUILDPATH}/RPMS/${TARGET_ARCH}/${PKG}-${RPMPV}-${PR}${DISTRO_PR}.${TARGET_ARCH}.rpm', d)
 	outrpm = bb.data.expand('${DEPLOY_DIR_RPM}/${PACKAGE_ARCH}/${PKG}-${RPMPV}-${PR}.${TARGET_ARCH}.rpm', d)
 	bb.movefile(rpm, outrpm)
 }

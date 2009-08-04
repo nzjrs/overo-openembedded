@@ -61,10 +61,16 @@ do_build
 # * ppc603e:   efika
 # * i586:      qemux86
 
-for machine in simpad om-gta01 c7x0 ixp4xxbe nokia800 htckaiser beagleboard dht-walnut efika qemux86
+if [ "$1" = "" ] ; then
+	ARCH_MACHINES="simpad om-gta01 c7x0 ixp4xxbe nokia800 htckaiser beagleboard dht-walnut efika qemux86"
+else
+	ARCH_MACHINES="$@"
+fi
+
+for machine in ${ARCH_MACHINES}
 do
         BUILD_MACHINE=$machine
-        BUILD_CLEAN="opkg-native qmake-native qmake2-native qt-x11-free python python-native python-pygtk gnome-icon-theme"
+        BUILD_CLEAN="qmake-native qmake2-native qt-x11-free python python-native python-pygtk gnome-icon-theme"
         BUILD_TARGETS=" \
                       abiword \
                       aircrack-ng \
@@ -94,9 +100,16 @@ do
                       cvs \
                       cwiid \
                       dates \
+                      devicekit-disks \
+                      dialog \
                       distcc \
                       dsniff \
+                      dosfstools \
                       duke3d \
+                      dvb-apps \
+                      dvbstream \
+                      dvbtraffic \
+                      dvbtune \
                       e-uae \
                       e-wm \
                       ekiga \
@@ -116,6 +129,7 @@ do
                       findutils \
                       firefox \
                       fish \
+                      fldigi \
                       flex \
                       flite \
                       frameworkd \
@@ -161,10 +175,13 @@ do
                       gqview \
                       gsm0710muxd \
                       gspcav1 \
+                      gst-omapfb \
                       gtk+ \
                       gzip \
                       hal \
+                      hdparm \
                       hexatrolic \
+                      htop \
                       i2c-tools \
                       iaimaster \
                       icebloxx \
@@ -178,6 +195,8 @@ do
                       iscsi-target \
                       ivman \
                       jamvm \
+                      julius \
+                      kernel-module-udlfb \
                       kismet \
                       konqueror-embedded \
                       labyrinth \
@@ -186,7 +205,7 @@ do
                       lighttpd \
                       links-x11 \
                       lirc \
-                      lowpan-utils \
+                      lowpan-tools \
                       m4 \
                       madplay \
                       mahjongg \
@@ -211,6 +230,7 @@ do
                       mutt \
                       mythtv \
                       nautilus \
+                      nbench-byte \
                       navit \
                       netkit-ftp \
                       netsurf \
@@ -227,6 +247,8 @@ do
                       openvpn \
                       opie-notes \
                       orage \
+                      padevchooser \
+                      pavucontrol \
                       palantir \
                       pairs \
                       pciutils \
@@ -300,6 +322,7 @@ do
                       tzdata \
                       ubahnnav \
                       ufraw \
+                      unzip \
                       usbutils \
                       usbview \
                       ushare \
@@ -311,6 +334,7 @@ do
                       win4 \
                       wireshark \
                       wpa-gui \
+                      wscan \
                       wt \
                       wt3 \
                       x11vnc \
@@ -319,7 +343,9 @@ do
                       xf86-input-mouse \
                       xf86-input-tslib \
                       xf86-video-ati \
+                      xf86-video-displaylink \
                       xf86-video-fbdev \
+                      xf86-video-sisusb \
                       xf86-video-vesa \
                       xfce-mcs-manager
                       xfce-mcs-manager \
@@ -341,8 +367,10 @@ do
                       xserver-xorg \
                       zauralign \
                       zddice \
+                      zenity \
                       zgscore \
                       zhone \
+                      zip \
                       ziq \
                       zlapspeed \
                       zrev7 \
@@ -356,11 +384,16 @@ done
 
 # machine packages (machine specific (sub)packages)
 
-for machine in overo omap3-pandora beagleboard omap3evm neuros-osd2 efika dht-walnut palmt650 omap5912osk ixp4xxle ixp4xxbe c7x0 poodle tosa akita spitz collie simpad om-gta01 om-gta02 a780 at91sam9263ek qemuarm h2200 h3900 h4000 hx4700 nokia800 dns323 mv2120 kuropro lspro tsx09 ts409 qemux86  
+if [ "$1" = "" ] ; then
+    MACHINES="simpad om-gta01 c7x0 ixp4xxbe nokia800 htckaiser beagleboard dht-walnut efika qemux86"
+else
+    MACHINES="$@"
+fi
 
+for machine in ${MACHINES}
 do
         BUILD_MACHINE=$machine
-            BUILD_CLEAN="opkg-native qmake-native qmake2-native qt-x11-free python python-native python-pygtk gnome-icon-theme"
+            BUILD_CLEAN="qmake-native qmake2-native qt-x11-free python python-native python-pygtk gnome-icon-theme"
         BUILD_TARGETS="task-base task-boot \
                        task-opie task-opie-all \
                        task-openmoko-base task-openmoko-debug task-openmoko-examples task-openmoko-linux task-openmoko-native-sdk task-openmoko-net task-openmoko-phone task-openmoko-pim task-openmoko-ui \
