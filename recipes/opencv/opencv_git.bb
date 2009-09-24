@@ -6,11 +6,11 @@ LICENSE = "GPLv2"
 
 ARM_INSTRUCTION_SET = "arm"
 
-PR = "r6"
+PR = "r8"
 
-DEPENDS = "libtool jpeg zlib libpng tiff glib-2.0 gtk+ libv4l ffmpeg libdc1394"
+DEPENDS = "libtool jpeg zlib libpng tiff glib-2.0 gtk+ libv4l libdc1394"
 
-SRCREV = "73017769e918a040a42259487888c329afd76730"
+SRCREV = "d287bc4d74765f473604c5e404bbe79a14f4ef36"
 SRC_URI = "git://github.com/nzjrs/opencv.git;protocol=git;branch=dc1394"
 PV = "1.1.0+git${SRCREV}"
 
@@ -27,6 +27,7 @@ EXTRA_OECONF = " \
 		--with-quicktime=no \
         --with-dc1394v2=yes \
         --with-v4l=yes \
+        --with-ffmpeg=no \
 "
 
 export BUILD_SYS
