@@ -3,12 +3,13 @@ PRIORITY = "optional"
 SECTION = "console/network"
 LICENSE = "GPL"
 
-PR = "r4"
+PR = "r6"
 
 DEPENDS = "e2fsprogs-libs tcp-wrappers libevent"
 
 SRC_URI = "${SOURCEFORGE_MIRROR}/nfs/nfs-utils-${PV}.tar.gz \
 	file://nfs-utils-tools-unset-cflags.patch;patch=1 \
+	file://nfs-utils-uclibc-compile.patch;patch=1 \
 	file://nfsserver \
    "
 
@@ -57,7 +58,7 @@ do_install() {
 	install -m 0755 ${S}/utils/showmount/showmount ${D}${sbindir}/showmount
 	install -m 0755 ${S}/utils/statd/statd ${D}${sbindir}/statd
 
-	ln -s ${D}/${base_sbindir}/mount.nfs ${D}/${base_sbindir}/mount.nfs4
+	ln -s ${base_sbindir}/mount.nfs ${D}/${base_sbindir}/mount.nfs4
 
 	install -d ${D}${mandir}/man8
 	install -m 0644 ${S}/utils/exportfs/exportfs.man ${D}${mandir}/man8/exportfs.8

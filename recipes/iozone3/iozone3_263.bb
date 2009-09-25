@@ -4,7 +4,10 @@ AUTHOR = "Don Capps <don.capps2@verizon.net>, William D. Norcott <wnorcott@us.or
 SECTION = "console/tests"
 LICENSE = "${PN}"
 
-TARGET_CC_ARCH += " ${LDFLAGS}"
+PR = "r1"
+
+# From Hugo: Used to be necessary
+# TARGET_CC_ARCH += " ${LDFLAGS}"
 
 SRC_URI = "http://www.iozone.org/src/current/iozone3_263.tar \
 	   file://copyright.txt \
